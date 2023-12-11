@@ -401,7 +401,7 @@
         "parameters": [
           {
             "name": "nip",
-            "in": "query",
+            "in": "path",
             "description": "NIP of akun",
             "required": true,
             "schema": {
@@ -465,7 +465,7 @@
         "parameters": [
           {
             "name": "nip",
-            "in": "query",
+            "in": "path",
             "description": "NIP of akun",
             "required": true,
             "schema": {
