@@ -386,7 +386,7 @@
         }
       }
     },
-    "/akun/pegawai/detail" : {
+    "/akun/pegawai/detail/{nip}" : {
       "get": {
         "tags": [
           "Akun"
@@ -902,7 +902,7 @@
         }
       }
     },
-    "/": {
+    "/file": {
       "post": {
         "tags": [
           "File"
