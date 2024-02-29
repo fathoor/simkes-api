@@ -12,7 +12,7 @@ type kehadiranControllerImpl struct {
 	service.KehadiranService
 }
 
-func (controller *kehadiranControllerImpl) Create(c *fiber.Ctx) error {
+func (controller *kehadiranControllerImpl) CheckIn(c *fiber.Ctx) error {
 	var request model.KehadiranRequest
 
 	if parse := c.BodyParser(&request); parse != nil {
@@ -21,11 +21,29 @@ func (controller *kehadiranControllerImpl) Create(c *fiber.Ctx) error {
 		})
 	}
 
-	response := controller.KehadiranService.Create(&request)
+	response := controller.KehadiranService.CheckIn(&request)
 
 	return c.Status(fiber.StatusCreated).JSON(web.Response{
 		Code:   fiber.StatusCreated,
 		Status: "Created",
+		Data:   response,
+	})
+}
+
+func (controller *kehadiranControllerImpl) CheckOut(c *fiber.Ctx) error {
+	var request model.KehadiranRequest
+
+	if parse := c.BodyParser(&request); parse != nil {
+		panic(exception.BadRequestError{
+			Message: "Invalid request body",
+		})
+	}
+	
+	response := controller.KehadiranService.CheckOut(&request)
+
+	return c.Status(fiber.StatusOK).JSON(web.Response{
+		Code:   fiber.StatusOK,
+		Status: "OK",
 		Data:   response,
 	})
 }
@@ -65,7 +83,7 @@ func (controller *kehadiranControllerImpl) GetByID(c *fiber.Ctx) error {
 }
 
 func (controller *kehadiranControllerImpl) Update(c *fiber.Ctx) error {
-	var request model.KehadiranRequest
+	var request model.KehadiranUpdateRequest
 
 	if parse := c.BodyParser(&request); parse != nil {
 		panic(exception.BadRequestError{

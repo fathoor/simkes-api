@@ -10,6 +10,7 @@ type KehadiranRepository interface {
 	FindAll() ([]entity.Kehadiran, error)
 	FindByNIP(nip string) ([]entity.Kehadiran, error)
 	FindByID(id uuid.UUID) (entity.Kehadiran, error)
+	FindLatestByNIP(nip string) (entity.Kehadiran, error)
 	Update(kehadiran *entity.Kehadiran) error
 	Delete(kehadiran *entity.Kehadiran) error
 }

@@ -16,21 +16,28 @@ func (repository *kehadiranRepositoryImpl) Insert(kehadiran *entity.Kehadiran) e
 
 func (repository *kehadiranRepositoryImpl) FindAll() ([]entity.Kehadiran, error) {
 	var kehadiran []entity.Kehadiran
-	err := repository.DB.Preload("shift").Find(&kehadiran).Error
+	err := repository.DB.Preload("Shift").Find(&kehadiran).Error
 
 	return kehadiran, err
 }
 
 func (repository *kehadiranRepositoryImpl) FindByNIP(nip string) ([]entity.Kehadiran, error) {
 	var kehadiran []entity.Kehadiran
-	err := repository.DB.Preload("shift").Find(&kehadiran, "nip = ?", nip).Error
+	err := repository.DB.Preload("Shift").Find(&kehadiran, "nip = ?", nip).Error
 
 	return kehadiran, err
 }
 
 func (repository *kehadiranRepositoryImpl) FindByID(id uuid.UUID) (entity.Kehadiran, error) {
 	var kehadiran entity.Kehadiran
-	err := repository.DB.Preload("shift").Take(&kehadiran, "id = ?", id).Error
+	err := repository.DB.Preload("Shift").Take(&kehadiran, "id = ?", id).Error
+
+	return kehadiran, err
+}
+
+func (repository *kehadiranRepositoryImpl) FindLatestByNIP(nip string) (entity.Kehadiran, error) {
+	var kehadiran entity.Kehadiran
+	err := repository.DB.Preload("Shift").Order("tanggal desc").Take(&kehadiran, "nip = ?", nip).Error
 
 	return kehadiran, err
 }
