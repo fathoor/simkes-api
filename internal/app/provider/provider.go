@@ -62,8 +62,12 @@ func (p *Provider) Provide() {
 	serviceJadwalPegawai := jadwalPegawaiService.NewJadwalPegawaiServiceProvider(&repositoryJadwalPegawai)
 	controllerJadwalPegawai := jadwalPegawaiController.NewJadwalPegawaiControllerProvider(&serviceJadwalPegawai)
 
+	repositoryShift := shiftRepository.NewShiftRepositoryProvider(p.DB)
+	serviceShift := shiftService.NewShiftServiceProvider(&repositoryShift)
+	controllerShift := shiftController.NewShiftControllerProvider(&serviceShift)
+
 	repositoryKehadiran := kehadiranRepository.NewKehadiranRepositoryProvider(p.DB)
-	serviceKehadiran := kehadiranService.NewKehadiranServiceProvider(&repositoryKehadiran)
+	serviceKehadiran := kehadiranService.NewKehadiranServiceProvider(&repositoryKehadiran, &repositoryShift)
 	controllerKehadiran := kehadiranController.NewKehadiranControllerProvider(&serviceKehadiran)
 
 	repositoryPegawai := pegawaiRepository.NewPegawaiRepositoryProvider(p.DB)
@@ -73,10 +77,6 @@ func (p *Provider) Provide() {
 	repositoryRole := roleRepository.NewRoleRepositoryProvider(p.DB)
 	serviceRole := roleService.NewRoleServiceProvider(&repositoryRole)
 	controllerRole := roleController.NewRoleControllerProvider(&serviceRole)
-
-	repositoryShift := shiftRepository.NewShiftRepositoryProvider(p.DB)
-	serviceShift := shiftService.NewShiftServiceProvider(&repositoryShift)
-	controllerShift := shiftController.NewShiftControllerProvider(&serviceShift)
 
 	router := route.Route{
 		App:                     p.App,

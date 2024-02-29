@@ -47,7 +47,7 @@ func (r *Route) Setup() {
 	akun.Put("/:nip", r.AkunController.Update, middleware.Authenticate("Pegawai"), middleware.AuthorizeNIP())
 	akun.Delete("/:nip", r.AkunController.Delete, middleware.Authenticate("Admin"))
 
-	auth.Post("/", r.AuthController.Login)
+	auth.Post("/login", r.AuthController.Login)
 
 	departemen.Post("/", r.DepartemenController.Create)
 	departemen.Get("/", r.DepartemenController.Get)
@@ -72,7 +72,8 @@ func (r *Route) Setup() {
 	jadwalPegawai.Put("/:tahun/:bulan/:hari/:nip", r.JadwalPegawaiController.Update)
 	jadwalPegawai.Delete("/:tahun/:bulan/:hari/:nip", r.JadwalPegawaiController.Delete)
 
-	kehadiran.Post("/", r.KehadiranController.Create)
+	kehadiran.Post("/checkin", r.KehadiranController.CheckIn)
+	kehadiran.Post("/checkout", r.KehadiranController.CheckOut)
 	kehadiran.Get("/", r.KehadiranController.Get)
 	kehadiran.Get("/:id", r.KehadiranController.GetByID)
 	kehadiran.Put("/:id", r.KehadiranController.Update)
