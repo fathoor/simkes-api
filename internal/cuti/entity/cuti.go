@@ -8,7 +8,7 @@ import (
 
 type Cuti struct {
 	ID             uuid.UUID      `gorm:"column:id;primaryKey"`
-	NIP            string         `gorm:"column_name:nip; not null"`
+	NIP            string         `gorm:"column:nip;not null"`
 	Pegawai        entity.Pegawai `gorm:"foreignKey:nip;references:nip"`
 	TanggalMulai   time.Time      `gorm:"column:tanggal_mulai;not null"`
 	TanggalSelesai time.Time      `gorm:"column:tanggal_selesai;not null"`
