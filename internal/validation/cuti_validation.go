@@ -1,7 +1,7 @@
 package validation
 
 import (
-	"github.com/fathoor/simkes-api/internal/app/validation"
+	"github.com/fathoor/simkes-api/internal/config"
 	"github.com/fathoor/simkes-api/internal/exception"
 	"github.com/fathoor/simkes-api/internal/model"
 	"time"
@@ -20,7 +20,7 @@ func ValidateCutiCreateRequest(request *model.CutiCreateRequest) error {
 		}
 	}
 
-	return validation.Validator.Struct(request)
+	return config.Validator.Struct(request)
 }
 
 func ValidateCutiUpdateRequest(request *model.CutiUpdateRequest) error {
@@ -36,5 +36,5 @@ func ValidateCutiUpdateRequest(request *model.CutiUpdateRequest) error {
 		}
 	}
 
-	return validation.Validator.Struct(request)
+	return config.Validator.Struct(request)
 }

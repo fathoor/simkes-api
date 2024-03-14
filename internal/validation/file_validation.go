@@ -2,7 +2,7 @@ package validation
 
 import (
 	"fmt"
-	"github.com/fathoor/simkes-api/internal/app/validation"
+	"github.com/fathoor/simkes-api/internal/config"
 	"github.com/fathoor/simkes-api/internal/exception"
 	"github.com/fathoor/simkes-api/internal/helper"
 	"github.com/fathoor/simkes-api/internal/model"
@@ -10,7 +10,7 @@ import (
 )
 
 func ValidateFileRequest(request *model.FileRequest) (string, error) {
-	if valid := validation.Validator.Struct(request); valid != nil {
+	if valid := config.Validator.Struct(request); valid != nil {
 		return "", exception.BadRequestError{
 			Message: "Invalid request data",
 		}
