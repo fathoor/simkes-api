@@ -1,18 +1,14 @@
-package test
+package main
 
 import (
+	"fmt"
 	"github.com/fathoor/simkes-api/internal/app/provider"
 	config2 "github.com/fathoor/simkes-api/internal/config"
 	"github.com/fathoor/simkes-api/internal/exception"
-	"github.com/gofiber/fiber/v2"
-	"github.com/joho/godotenv"
-	"os"
+	_ "github.com/joho/godotenv/autoload"
 )
 
-func ProvideTestApp() *fiber.App {
-	err := godotenv.Load(".env.test")
-	exception.PanicIfError(err)
-
+func main() {
 	var (
 		cfg = config2.ProvideConfig()
 		app = config2.ProvideApp(cfg)
@@ -22,10 +18,6 @@ func ProvideTestApp() *fiber.App {
 
 	di.Provide()
 
-	return app
+	err := app.Listen(fmt.Sprintf(":%d", cfg.GetInt("APP_PORT")))
+	exception.PanicIfError(err)
 }
-
-var (
-	app   = ProvideTestApp()
-	token = os.Getenv("TEST_TOKEN")
-)
