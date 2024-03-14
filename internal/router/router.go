@@ -7,7 +7,7 @@ import (
 	"github.com/samber/do"
 )
 
-type Route struct {
+type Router struct {
 	App                     *fiber.App
 	AkunController          *controller.AkunController
 	AuthController          *controller.AuthController
@@ -22,8 +22,8 @@ type Route struct {
 	ShiftController         *controller.ShiftController
 }
 
-func NewRoute(i *do.Injector) (*Route, error) {
-	return &Route{
+func NewRouter(i *do.Injector) (*Router, error) {
+	return &Router{
 		App:                     do.MustInvoke[*fiber.App](i),
 		AkunController:          do.MustInvoke[*controller.AkunController](i),
 		AuthController:          do.MustInvoke[*controller.AuthController](i),
@@ -39,7 +39,7 @@ func NewRoute(i *do.Injector) (*Route, error) {
 	}, nil
 }
 
-func (r *Route) Setup() {
+func (r *Router) Route() {
 	akun := r.App.Group("/v1/akun", middleware.Authenticate("Public"))
 	auth := r.App.Group("/v1/auth")
 	cuti := r.App.Group("/v1/cuti", middleware.Authenticate("Pegawai"))

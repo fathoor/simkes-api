@@ -1,30 +1,29 @@
 package config
 
 import (
-	"github.com/fathoor/simkes-api/internal/exception"
+	"github.com/rs/zerolog"
+	"github.com/samber/do"
 	"os"
 	"strconv"
 )
 
-type Config interface {
-	Get(key string) string
-	GetInt(key string) int
+type Config struct {
+	Log *zerolog.Logger
 }
 
-type configImpl struct {
+func NewConfig(i *do.Injector) (*Config, error) {
+	return &Config{
+		Log: do.MustInvoke[*zerolog.Logger](i),
+	}, nil
 }
 
-func (c *configImpl) Get(key string) string {
+func (c *Config) Get(key string) string {
 	return os.Getenv(key)
 }
 
-func (c *configImpl) GetInt(key string) int {
+func (c *Config) GetInt(key string) int {
 	value, err := strconv.Atoi(os.Getenv(key))
-	exception.PanicIfError(err)
+	c.Log.Fatal().Err(err).Msg("Failed to parse int")
 
 	return value
-}
-
-func ProvideConfig() Config {
-	return &configImpl{}
 }

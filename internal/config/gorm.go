@@ -2,14 +2,14 @@ package config
 
 import (
 	"fmt"
-	"github.com/fathoor/simkes-api/internal/exception"
+	"github.com/rs/zerolog"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 	"time"
 )
 
-func ProvideDB(cfg Config) *gorm.DB {
+func NewDB(cfg *Config, log *zerolog.Logger) *gorm.DB {
 	var (
 		host         = cfg.Get("PG_HOST")
 		port         = cfg.Get("PG_PORT")
@@ -28,10 +28,14 @@ func ProvideDB(cfg Config) *gorm.DB {
 		Logger:         logger.Default.LogMode(logger.Info),
 		TranslateError: true,
 	})
-	exception.PanicIfError(err)
+	if err != nil {
+		log.Fatal().Err(err).Msg("Failed to connect to database")
+	}
 
 	psql, err := db.DB()
-	exception.PanicIfError(err)
+	if err != nil {
+		log.Fatal().Err(err).Msg("Failed to create database instance")
+	}
 
 	psql.SetMaxOpenConns(connOpen)
 	psql.SetMaxIdleConns(connIdle)
