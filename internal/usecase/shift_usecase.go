@@ -7,14 +7,21 @@ import (
 	"github.com/fathoor/simkes-api/internal/model"
 	"github.com/fathoor/simkes-api/internal/repository"
 	"github.com/fathoor/simkes-api/internal/validation"
+	"github.com/samber/do"
 	"time"
 )
 
-type shiftServiceImpl struct {
+type ShiftUseCase struct {
 	repository.ShiftRepository
 }
 
-func (service *shiftServiceImpl) Create(request *model.ShiftRequest) model.ShiftResponse {
+func NewShiftUseCase(i *do.Injector) (*ShiftUseCase, error) {
+	return &ShiftUseCase{
+		ShiftRepository: do.MustInvoke[repository.ShiftRepository](i),
+	}, nil
+}
+
+func (u *ShiftUseCase) Create(request *model.ShiftRequest) model.ShiftResponse {
 	if valid := validation.ValidateShiftRequest(request); valid != nil {
 		panic(exception.BadRequestError{
 			Message: "Invalid request data",
@@ -33,7 +40,7 @@ func (service *shiftServiceImpl) Create(request *model.ShiftRequest) model.Shift
 		JamKeluar: jamKeluar,
 	}
 
-	if err := service.ShiftRepository.Insert(&shift); err != nil {
+	if err := u.ShiftRepository.Insert(&shift); err != nil {
 		exception.PanicIfError(err)
 	}
 
@@ -46,8 +53,8 @@ func (service *shiftServiceImpl) Create(request *model.ShiftRequest) model.Shift
 	return response
 }
 
-func (service *shiftServiceImpl) GetAll() []model.ShiftResponse {
-	shift, err := service.ShiftRepository.FindAll()
+func (u *ShiftUseCase) GetAll() []model.ShiftResponse {
+	shift, err := u.ShiftRepository.FindAll()
 	exception.PanicIfError(err)
 
 	response := make([]model.ShiftResponse, len(shift))
@@ -62,8 +69,8 @@ func (service *shiftServiceImpl) GetAll() []model.ShiftResponse {
 	return response
 }
 
-func (service *shiftServiceImpl) GetByNama(nama string) model.ShiftResponse {
-	shift, err := service.ShiftRepository.FindByNama(nama)
+func (u *ShiftUseCase) GetByNama(nama string) model.ShiftResponse {
+	shift, err := u.ShiftRepository.FindByNama(nama)
 	if err != nil {
 		panic(exception.NotFoundError{
 			Message: "Shift not found",
@@ -79,14 +86,14 @@ func (service *shiftServiceImpl) GetByNama(nama string) model.ShiftResponse {
 	return response
 }
 
-func (service *shiftServiceImpl) Update(nama string, request *model.ShiftRequest) model.ShiftResponse {
+func (u *ShiftUseCase) Update(nama string, request *model.ShiftRequest) model.ShiftResponse {
 	if valid := validation.ValidateShiftRequest(request); valid != nil {
 		panic(exception.BadRequestError{
 			Message: "Invalid request data",
 		})
 	}
 
-	shift, err := service.ShiftRepository.FindByNama(nama)
+	shift, err := u.ShiftRepository.FindByNama(nama)
 	if err != nil {
 		panic(exception.NotFoundError{
 			Message: "Shift not found",
@@ -103,7 +110,7 @@ func (service *shiftServiceImpl) Update(nama string, request *model.ShiftRequest
 	shift.JamMasuk = jamMasuk
 	shift.JamKeluar = jamKeluar
 
-	if err := service.ShiftRepository.Update(&shift); err != nil {
+	if err := u.ShiftRepository.Update(&shift); err != nil {
 		exception.PanicIfError(err)
 	}
 
@@ -116,19 +123,15 @@ func (service *shiftServiceImpl) Update(nama string, request *model.ShiftRequest
 	return response
 }
 
-func (service *shiftServiceImpl) Delete(nama string) {
-	shift, err := service.ShiftRepository.FindByNama(nama)
+func (u *ShiftUseCase) Delete(nama string) {
+	shift, err := u.ShiftRepository.FindByNama(nama)
 	if err != nil {
 		panic(exception.NotFoundError{
 			Message: "Shift not found",
 		})
 	}
 
-	if err := service.ShiftRepository.Delete(&shift); err != nil {
+	if err := u.ShiftRepository.Delete(&shift); err != nil {
 		exception.PanicIfError(err)
 	}
-}
-
-func NewShiftServiceProvider(repository *repository.ShiftRepository) ShiftService {
-	return &shiftServiceImpl{*repository}
 }

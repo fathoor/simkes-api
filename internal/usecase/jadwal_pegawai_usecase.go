@@ -6,13 +6,20 @@ import (
 	"github.com/fathoor/simkes-api/internal/model"
 	"github.com/fathoor/simkes-api/internal/repository"
 	"github.com/fathoor/simkes-api/internal/validation"
+	"github.com/samber/do"
 )
 
-type jadwalPegawaiServiceImpl struct {
-	repository.JadwalPegawaiRepository
+type JadwalPegawaiUseCase struct {
+	JadwalPegawaiRepository *repository.JadwalPegawaiRepository
 }
 
-func (service *jadwalPegawaiServiceImpl) Create(request *model.JadwalPegawaiRequest) model.JadwalPegawaiResponse {
+func NewJadwalPegawaiUseCase(i *do.Injector) (*JadwalPegawaiUseCase, error) {
+	return &JadwalPegawaiUseCase{
+		JadwalPegawaiRepository: do.MustInvoke[*repository.JadwalPegawaiRepository](i),
+	}, nil
+}
+
+func (u *JadwalPegawaiUseCase) Create(request *model.JadwalPegawaiRequest) model.JadwalPegawaiResponse {
 	if valid := validation.ValidateJadwalPegawaiRequest(request); valid != nil {
 		panic(exception.BadRequestError{
 			Message: "Invalid request data",
@@ -27,7 +34,7 @@ func (service *jadwalPegawaiServiceImpl) Create(request *model.JadwalPegawaiRequ
 		ShiftNama: request.ShiftNama,
 	}
 
-	if err := service.JadwalPegawaiRepository.Insert(&jadwalPegawai); err != nil {
+	if err := u.JadwalPegawaiRepository.Insert(&jadwalPegawai); err != nil {
 		exception.PanicIfError(err)
 	}
 
@@ -42,8 +49,8 @@ func (service *jadwalPegawaiServiceImpl) Create(request *model.JadwalPegawaiRequ
 	return response
 }
 
-func (service *jadwalPegawaiServiceImpl) GetAll() []model.JadwalPegawaiResponse {
-	jadwalPegawai, err := service.JadwalPegawaiRepository.FindAll()
+func (u *JadwalPegawaiUseCase) GetAll() []model.JadwalPegawaiResponse {
+	jadwalPegawai, err := u.JadwalPegawaiRepository.FindAll()
 	exception.PanicIfError(err)
 
 	response := make([]model.JadwalPegawaiResponse, len(jadwalPegawai))
@@ -60,8 +67,8 @@ func (service *jadwalPegawaiServiceImpl) GetAll() []model.JadwalPegawaiResponse 
 	return response
 }
 
-func (service *jadwalPegawaiServiceImpl) GetByNIP(nip string) []model.JadwalPegawaiResponse {
-	jadwalPegawai, err := service.JadwalPegawaiRepository.FindByNIP(nip)
+func (u *JadwalPegawaiUseCase) GetByNIP(nip string) []model.JadwalPegawaiResponse {
+	jadwalPegawai, err := u.JadwalPegawaiRepository.FindByNIP(nip)
 	exception.PanicIfError(err)
 
 	response := make([]model.JadwalPegawaiResponse, len(jadwalPegawai))
@@ -78,8 +85,8 @@ func (service *jadwalPegawaiServiceImpl) GetByNIP(nip string) []model.JadwalPega
 	return response
 }
 
-func (service *jadwalPegawaiServiceImpl) GetByTahunBulan(tahun, bulan int16) []model.JadwalPegawaiResponse {
-	jadwalPegawai, err := service.JadwalPegawaiRepository.FindByTahunBulan(tahun, bulan)
+func (u *JadwalPegawaiUseCase) GetByTahunBulan(tahun, bulan int16) []model.JadwalPegawaiResponse {
+	jadwalPegawai, err := u.JadwalPegawaiRepository.FindByTahunBulan(tahun, bulan)
 	exception.PanicIfError(err)
 
 	response := make([]model.JadwalPegawaiResponse, len(jadwalPegawai))
@@ -96,8 +103,8 @@ func (service *jadwalPegawaiServiceImpl) GetByTahunBulan(tahun, bulan int16) []m
 	return response
 }
 
-func (service *jadwalPegawaiServiceImpl) GetByPK(nip string, tahun, bulan, hari int16) model.JadwalPegawaiResponse {
-	jadwalPegawai, err := service.JadwalPegawaiRepository.FindByPK(nip, tahun, bulan, hari)
+func (u *JadwalPegawaiUseCase) GetByPK(nip string, tahun, bulan, hari int16) model.JadwalPegawaiResponse {
+	jadwalPegawai, err := u.JadwalPegawaiRepository.FindByPK(nip, tahun, bulan, hari)
 	if err != nil {
 		panic(exception.NotFoundError{
 			Message: "Jadwal Pegawai not found",
@@ -115,14 +122,14 @@ func (service *jadwalPegawaiServiceImpl) GetByPK(nip string, tahun, bulan, hari 
 	return response
 }
 
-func (service *jadwalPegawaiServiceImpl) Update(nip string, tahun, bulan, hari int16, request *model.JadwalPegawaiRequest) model.JadwalPegawaiResponse {
+func (u *JadwalPegawaiUseCase) Update(nip string, tahun, bulan, hari int16, request *model.JadwalPegawaiRequest) model.JadwalPegawaiResponse {
 	if valid := validation.ValidateJadwalPegawaiRequest(request); valid != nil {
 		panic(exception.BadRequestError{
 			Message: "Invalid request data",
 		})
 	}
 
-	jadwalPegawai, err := service.JadwalPegawaiRepository.FindByPK(nip, tahun, bulan, hari)
+	jadwalPegawai, err := u.JadwalPegawaiRepository.FindByPK(nip, tahun, bulan, hari)
 	if err != nil {
 		panic(exception.NotFoundError{
 			Message: "Jadwal Pegawai not found",
@@ -131,7 +138,7 @@ func (service *jadwalPegawaiServiceImpl) Update(nip string, tahun, bulan, hari i
 
 	jadwalPegawai.ShiftNama = request.ShiftNama
 
-	if err := service.JadwalPegawaiRepository.Update(&jadwalPegawai); err != nil {
+	if err := u.JadwalPegawaiRepository.Update(&jadwalPegawai); err != nil {
 		exception.PanicIfError(err)
 	}
 
@@ -146,19 +153,15 @@ func (service *jadwalPegawaiServiceImpl) Update(nip string, tahun, bulan, hari i
 	return response
 }
 
-func (service *jadwalPegawaiServiceImpl) Delete(nip string, tahun, bulan, hari int16) {
-	jadwalPegawai, err := service.JadwalPegawaiRepository.FindByPK(nip, tahun, bulan, hari)
+func (u *JadwalPegawaiUseCase) Delete(nip string, tahun, bulan, hari int16) {
+	jadwalPegawai, err := u.JadwalPegawaiRepository.FindByPK(nip, tahun, bulan, hari)
 	if err != nil {
 		panic(exception.NotFoundError{
 			Message: "Jadwal Pegawai not found",
 		})
 	}
 
-	if err := service.JadwalPegawaiRepository.Delete(&jadwalPegawai); err != nil {
+	if err := u.JadwalPegawaiRepository.Delete(&jadwalPegawai); err != nil {
 		exception.PanicIfError(err)
 	}
-}
-
-func NewJadwalPegawaiServiceProvider(repository *repository.JadwalPegawaiRepository) JadwalPegawaiService {
-	return &jadwalPegawaiServiceImpl{*repository}
 }

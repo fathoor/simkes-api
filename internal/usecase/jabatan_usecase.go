@@ -6,13 +6,20 @@ import (
 	"github.com/fathoor/simkes-api/internal/model"
 	"github.com/fathoor/simkes-api/internal/repository"
 	"github.com/fathoor/simkes-api/internal/validation"
+	"github.com/samber/do"
 )
 
-type jabatanServiceImpl struct {
-	repository.JabatanRepository
+type JabatanUseCase struct {
+	JabatanRepository *repository.JabatanRepository
 }
 
-func (service *jabatanServiceImpl) Create(request *model.JabatanRequest) model.JabatanResponse {
+func NewJabatanUseCase(i *do.Injector) (*JabatanUseCase, error) {
+	return &JabatanUseCase{
+		JabatanRepository: do.MustInvoke[*repository.JabatanRepository](i),
+	}, nil
+}
+
+func (u *JabatanUseCase) Create(request *model.JabatanRequest) model.JabatanResponse {
 	if err := validation.ValidateJabatanRequest(request); err != nil {
 		panic(exception.BadRequestError{
 			Message: "Invalid request data",
@@ -26,7 +33,7 @@ func (service *jabatanServiceImpl) Create(request *model.JabatanRequest) model.J
 		Tunjangan: request.Tunjangan,
 	}
 
-	if err := service.JabatanRepository.Insert(&jabatan); err != nil {
+	if err := u.JabatanRepository.Insert(&jabatan); err != nil {
 		exception.PanicIfError(err)
 	}
 
@@ -40,8 +47,8 @@ func (service *jabatanServiceImpl) Create(request *model.JabatanRequest) model.J
 	return response
 }
 
-func (service *jabatanServiceImpl) GetAll() []model.JabatanResponse {
-	jabatan, err := service.JabatanRepository.FindAll()
+func (u *JabatanUseCase) GetAll() []model.JabatanResponse {
+	jabatan, err := u.JabatanRepository.FindAll()
 	exception.PanicIfError(err)
 
 	response := make([]model.JabatanResponse, len(jabatan))
@@ -57,8 +64,8 @@ func (service *jabatanServiceImpl) GetAll() []model.JabatanResponse {
 	return response
 }
 
-func (service *jabatanServiceImpl) GetByJabatan(j string) model.JabatanResponse {
-	jabatan, err := service.JabatanRepository.FindByJabatan(j)
+func (u *JabatanUseCase) GetByJabatan(j string) model.JabatanResponse {
+	jabatan, err := u.JabatanRepository.FindByJabatan(j)
 	if err != nil {
 		panic(exception.NotFoundError{
 			Message: "Jabatan not found",
@@ -75,14 +82,14 @@ func (service *jabatanServiceImpl) GetByJabatan(j string) model.JabatanResponse 
 	return response
 }
 
-func (service *jabatanServiceImpl) Update(j string, request *model.JabatanRequest) model.JabatanResponse {
+func (u *JabatanUseCase) Update(j string, request *model.JabatanRequest) model.JabatanResponse {
 	if valid := validation.ValidateJabatanRequest(request); valid != nil {
 		panic(exception.BadRequestError{
 			Message: "Invalid request data",
 		})
 	}
 
-	jabatan, err := service.JabatanRepository.FindByJabatan(j)
+	jabatan, err := u.JabatanRepository.FindByJabatan(j)
 	if err != nil {
 		panic(exception.NotFoundError{
 			Message: "Jabatan not found",
@@ -94,7 +101,7 @@ func (service *jabatanServiceImpl) Update(j string, request *model.JabatanReques
 	jabatan.GajiPokok = request.GajiPokok
 	jabatan.Tunjangan = request.Tunjangan
 
-	if err := service.JabatanRepository.Update(&jabatan); err != nil {
+	if err := u.JabatanRepository.Update(&jabatan); err != nil {
 		exception.PanicIfError(err)
 	}
 
@@ -108,19 +115,15 @@ func (service *jabatanServiceImpl) Update(j string, request *model.JabatanReques
 	return response
 }
 
-func (service *jabatanServiceImpl) Delete(j string) {
-	jabatan, err := service.JabatanRepository.FindByJabatan(j)
+func (u *JabatanUseCase) Delete(j string) {
+	jabatan, err := u.JabatanRepository.FindByJabatan(j)
 	if err != nil {
 		panic(exception.NotFoundError{
 			Message: "Jabatan not found",
 		})
 	}
 
-	if err := service.JabatanRepository.Delete(&jabatan); err != nil {
+	if err := u.JabatanRepository.Delete(&jabatan); err != nil {
 		exception.PanicIfError(err)
 	}
-}
-
-func NewJabatanServiceProvider(repository *repository.JabatanRepository) JabatanService {
-	return &jabatanServiceImpl{*repository}
 }

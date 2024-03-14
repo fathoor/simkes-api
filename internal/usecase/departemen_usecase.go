@@ -6,13 +6,20 @@ import (
 	"github.com/fathoor/simkes-api/internal/model"
 	"github.com/fathoor/simkes-api/internal/repository"
 	"github.com/fathoor/simkes-api/internal/validation"
+	"github.com/samber/do"
 )
 
-type departemenServiceImpl struct {
-	repository.DepartemenRepository
+type DepartemenUseCase struct {
+	DepartemenRepository *repository.DepartemenRepository
 }
 
-func (service *departemenServiceImpl) Create(request *model.DepartemenRequest) model.DepartemenResponse {
+func NewDepartemenUseCase(i *do.Injector) (*DepartemenUseCase, error) {
+	return &DepartemenUseCase{
+		DepartemenRepository: do.MustInvoke[*repository.DepartemenRepository](i),
+	}, nil
+}
+
+func (u *DepartemenUseCase) Create(request *model.DepartemenRequest) model.DepartemenResponse {
 	if err := validation.ValidateDepartemenRequest(request); err != nil {
 		panic(exception.BadRequestError{
 			Message: "Invalid request data",
@@ -23,7 +30,7 @@ func (service *departemenServiceImpl) Create(request *model.DepartemenRequest) m
 		Nama: request.Nama,
 	}
 
-	if err := service.DepartemenRepository.Insert(&departemen); err != nil {
+	if err := u.DepartemenRepository.Insert(&departemen); err != nil {
 		exception.PanicIfError(err)
 	}
 
@@ -34,8 +41,8 @@ func (service *departemenServiceImpl) Create(request *model.DepartemenRequest) m
 	return response
 }
 
-func (service *departemenServiceImpl) GetAll() []model.DepartemenResponse {
-	departemen, err := service.DepartemenRepository.FindAll()
+func (u *DepartemenUseCase) GetAll() []model.DepartemenResponse {
+	departemen, err := u.DepartemenRepository.FindAll()
 	exception.PanicIfError(err)
 
 	response := make([]model.DepartemenResponse, len(departemen))
@@ -48,8 +55,8 @@ func (service *departemenServiceImpl) GetAll() []model.DepartemenResponse {
 	return response
 }
 
-func (service *departemenServiceImpl) GetByDepartemen(d string) model.DepartemenResponse {
-	departemen, err := service.DepartemenRepository.FindByDepartemen(d)
+func (u *DepartemenUseCase) GetByDepartemen(d string) model.DepartemenResponse {
+	departemen, err := u.DepartemenRepository.FindByDepartemen(d)
 	exception.PanicIfError(err)
 
 	response := model.DepartemenResponse{
@@ -59,14 +66,14 @@ func (service *departemenServiceImpl) GetByDepartemen(d string) model.Departemen
 	return response
 }
 
-func (service *departemenServiceImpl) Update(d string, request *model.DepartemenRequest) model.DepartemenResponse {
+func (u *DepartemenUseCase) Update(d string, request *model.DepartemenRequest) model.DepartemenResponse {
 	if err := validation.ValidateDepartemenRequest(request); err != nil {
 		panic(exception.BadRequestError{
 			Message: "Invalid request data",
 		})
 	}
 
-	departemen, err := service.DepartemenRepository.FindByDepartemen(d)
+	departemen, err := u.DepartemenRepository.FindByDepartemen(d)
 	if err != nil {
 		panic(exception.NotFoundError{
 			Message: "Departemen not found",
@@ -75,7 +82,7 @@ func (service *departemenServiceImpl) Update(d string, request *model.Departemen
 
 	departemen.Nama = request.Nama
 
-	if err := service.DepartemenRepository.Update(&departemen); err != nil {
+	if err := u.DepartemenRepository.Update(&departemen); err != nil {
 		exception.PanicIfError(err)
 	}
 
@@ -86,19 +93,15 @@ func (service *departemenServiceImpl) Update(d string, request *model.Departemen
 	return response
 }
 
-func (service *departemenServiceImpl) Delete(d string) {
-	departemen, err := service.DepartemenRepository.FindByDepartemen(d)
+func (u *DepartemenUseCase) Delete(d string) {
+	departemen, err := u.DepartemenRepository.FindByDepartemen(d)
 	if err != nil {
 		panic(exception.NotFoundError{
 			Message: "Departemen not found",
 		})
 	}
 
-	if err := service.DepartemenRepository.Delete(&departemen); err != nil {
+	if err := u.DepartemenRepository.Delete(&departemen); err != nil {
 		exception.PanicIfError(err)
 	}
-}
-
-func NewDepartemenServiceProvider(repository *repository.DepartemenRepository) DepartemenService {
-	return &departemenServiceImpl{*repository}
 }

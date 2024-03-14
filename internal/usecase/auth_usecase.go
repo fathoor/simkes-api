@@ -2,38 +2,45 @@ package usecase
 
 import (
 	"github.com/fathoor/simkes-api/internal/exception"
-	helper2 "github.com/fathoor/simkes-api/internal/helper"
+	"github.com/fathoor/simkes-api/internal/helper"
 	"github.com/fathoor/simkes-api/internal/model"
 	"github.com/fathoor/simkes-api/internal/repository"
 	"github.com/fathoor/simkes-api/internal/validation"
+	"github.com/samber/do"
 	"time"
 )
 
-type authServiceImpl struct {
-	repository.AkunRepository
+type AuthUseCase struct {
+	AkunRepository *repository.AkunRepository
 }
 
-func (service *authServiceImpl) Login(request *model.AuthRequest) model.AuthResponse {
+func NewAuthUseCase(i *do.Injector) (*AuthUseCase, error) {
+	return &AuthUseCase{
+		AkunRepository: do.MustInvoke[*repository.AkunRepository](i),
+	}, nil
+}
+
+func (u *AuthUseCase) Login(request *model.AuthRequest) model.AuthResponse {
 	if valid := validation.ValidateAuthRequest(request); valid != nil {
 		panic(exception.BadRequestError{
 			Message: "Invalid request data",
 		})
 	}
 
-	akun, err := service.AkunRepository.FindByNIP(request.NIP)
+	akun, err := u.AkunRepository.FindByNIP(request.NIP)
 	if err != nil {
 		panic(exception.NotFoundError{
 			Message: "Akun not found",
 		})
 	}
 
-	if !helper2.DecryptPassword(akun.Password, request.Password) {
+	if !helper.DecryptPassword(akun.Password, request.Password) {
 		panic(exception.UnauthorizedError{
 			Message: "Invalid password",
 		})
 	}
 
-	token, err := helper2.GenerateJWT(akun.NIP, akun.RoleNama)
+	token, err := helper.GenerateJWT(akun.NIP, akun.RoleNama)
 	exception.PanicIfError(err)
 
 	response := model.AuthResponse{
@@ -42,8 +49,4 @@ func (service *authServiceImpl) Login(request *model.AuthRequest) model.AuthResp
 	}
 
 	return response
-}
-
-func NewAuthServiceProvider(repository *repository.AkunRepository) AuthService {
-	return &authServiceImpl{*repository}
 }

@@ -7,13 +7,20 @@ import (
 	"github.com/fathoor/simkes-api/internal/model"
 	"github.com/fathoor/simkes-api/internal/repository"
 	"github.com/fathoor/simkes-api/internal/validation"
+	"github.com/samber/do"
 )
 
-type akunServiceImpl struct {
-	repository.AkunRepository
+type AkunUseCase struct {
+	AkunRepository *repository.AkunRepository
 }
 
-func (service *akunServiceImpl) Create(request *model.AkunRequest) model.AkunResponse {
+func NewAkunUseCase(i *do.Injector) (*AkunUseCase, error) {
+	return &AkunUseCase{
+		AkunRepository: do.MustInvoke[*repository.AkunRepository](i),
+	}, nil
+}
+
+func (u *AkunUseCase) Create(request *model.AkunRequest) model.AkunResponse {
 	if valid := validation.ValidateAkunRequest(request); valid != nil {
 		panic(exception.BadRequestError{
 			Message: "Invalid request data",
@@ -30,7 +37,7 @@ func (service *akunServiceImpl) Create(request *model.AkunRequest) model.AkunRes
 		RoleNama: request.RoleNama,
 	}
 
-	if err := service.AkunRepository.Insert(&akun); err != nil {
+	if err := u.AkunRepository.Insert(&akun); err != nil {
 		exception.PanicIfError(err)
 	}
 
@@ -43,8 +50,8 @@ func (service *akunServiceImpl) Create(request *model.AkunRequest) model.AkunRes
 	return response
 }
 
-func (service *akunServiceImpl) GetAll() []model.AkunResponse {
-	akun, err := service.AkunRepository.FindAll()
+func (u *AkunUseCase) GetAll() []model.AkunResponse {
+	akun, err := u.AkunRepository.FindAll()
 	exception.PanicIfError(err)
 
 	response := make([]model.AkunResponse, len(akun))
@@ -59,8 +66,8 @@ func (service *akunServiceImpl) GetAll() []model.AkunResponse {
 	return response
 }
 
-func (service *akunServiceImpl) GetPage(page, size int) model.AkunPageResponse {
-	akun, total, err := service.AkunRepository.FindPage(page, size)
+func (u *AkunUseCase) GetPage(page, size int) model.AkunPageResponse {
+	akun, total, err := u.AkunRepository.FindPage(page, size)
 	exception.PanicIfError(err)
 
 	response := make([]model.AkunResponse, len(akun))
@@ -82,8 +89,8 @@ func (service *akunServiceImpl) GetPage(page, size int) model.AkunPageResponse {
 	return pagedResponse
 }
 
-func (service *akunServiceImpl) GetByNIP(nip string) model.AkunResponse {
-	akun, err := service.AkunRepository.FindByNIP(nip)
+func (u *AkunUseCase) GetByNIP(nip string) model.AkunResponse {
+	akun, err := u.AkunRepository.FindByNIP(nip)
 	if err != nil {
 		panic(exception.NotFoundError{
 			Message: "Akun not found",
@@ -99,14 +106,14 @@ func (service *akunServiceImpl) GetByNIP(nip string) model.AkunResponse {
 	return response
 }
 
-func (service *akunServiceImpl) Update(nip string, request *model.AkunRequest) model.AkunResponse {
+func (u *AkunUseCase) Update(nip string, request *model.AkunRequest) model.AkunResponse {
 	if valid := validation.ValidateAkunRequest(request); valid != nil {
 		panic(exception.BadRequestError{
 			Message: "Invalid request data",
 		})
 	}
 
-	akun, err := service.AkunRepository.FindByNIP(nip)
+	akun, err := u.AkunRepository.FindByNIP(nip)
 	if err != nil {
 		panic(exception.NotFoundError{
 			Message: "Akun not found",
@@ -128,21 +135,21 @@ func (service *akunServiceImpl) Update(nip string, request *model.AkunRequest) m
 		RoleNama: akun.RoleNama,
 	}
 
-	if err := service.AkunRepository.Update(&akun); err != nil {
+	if err := u.AkunRepository.Update(&akun); err != nil {
 		exception.PanicIfError(err)
 	}
 
 	return response
 }
 
-func (service *akunServiceImpl) UpdateAdmin(nip string, request *model.AkunRequest) model.AkunResponse {
+func (u *AkunUseCase) UpdateAdmin(nip string, request *model.AkunRequest) model.AkunResponse {
 	if valid := validation.ValidateAkunRequest(request); valid != nil {
 		panic(exception.BadRequestError{
 			Message: "Invalid request data",
 		})
 	}
 
-	akun, err := service.AkunRepository.FindByNIP(nip)
+	akun, err := u.AkunRepository.FindByNIP(nip)
 	if err != nil {
 		panic(exception.NotFoundError{
 			Message: "Akun not found",
@@ -166,27 +173,22 @@ func (service *akunServiceImpl) UpdateAdmin(nip string, request *model.AkunReque
 		RoleNama: akun.RoleNama,
 	}
 
-	if err := service.AkunRepository.Update(&akun); err != nil {
+	if err := u.AkunRepository.Update(&akun); err != nil {
 		exception.PanicIfError(err)
 	}
 
 	return response
-
 }
 
-func (service *akunServiceImpl) Delete(nip string) {
-	akun, err := service.AkunRepository.FindByNIP(nip)
+func (u *AkunUseCase) Delete(nip string) {
+	akun, err := u.AkunRepository.FindByNIP(nip)
 	if err != nil {
 		panic(exception.NotFoundError{
 			Message: "Akun not found",
 		})
 	}
 
-	if err := service.AkunRepository.Delete(&akun); err != nil {
+	if err := u.AkunRepository.Delete(&akun); err != nil {
 		exception.PanicIfError(err)
 	}
-}
-
-func NewAkunServiceProvider(repository *repository.AkunRepository) AkunService {
-	return &akunServiceImpl{*repository}
 }

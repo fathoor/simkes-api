@@ -8,22 +8,30 @@ import (
 	"github.com/fathoor/simkes-api/internal/repository"
 	"github.com/fathoor/simkes-api/internal/validation"
 	"github.com/google/uuid"
+	"github.com/samber/do"
 	"time"
 )
 
-type kehadiranServiceImpl struct {
-	repository.KehadiranRepository
-	repository.ShiftRepository
+type KehadiranUseCase struct {
+	KehadiranRepository *repository.KehadiranRepository
+	ShiftRepository     *repository.ShiftRepository
 }
 
-func (service *kehadiranServiceImpl) CheckIn(request *model.KehadiranRequest) model.KehadiranResponse {
+func NewKehadiranUseCase(i *do.Injector) (*KehadiranUseCase, error) {
+	return &KehadiranUseCase{
+		KehadiranRepository: do.MustInvoke[*repository.KehadiranRepository](i),
+		ShiftRepository:     do.MustInvoke[*repository.ShiftRepository](i),
+	}, nil
+}
+
+func (u *KehadiranUseCase) CheckIn(request *model.KehadiranRequest) model.KehadiranResponse {
 	if valid := validation.ValidateKehadiranRequest(request); valid != nil {
 		panic(exception.BadRequestError{
 			Message: "Invalid request data",
 		})
 	}
 
-	shift, err := service.ShiftRepository.FindByNama(request.ShiftNama)
+	shift, err := u.ShiftRepository.FindByNama(request.ShiftNama)
 	if err != nil {
 		panic(exception.NotFoundError{
 			Message: "Shift not found",
@@ -56,7 +64,7 @@ func (service *kehadiranServiceImpl) CheckIn(request *model.KehadiranRequest) mo
 		Keterangan: keterangan,
 	}
 
-	if err := service.KehadiranRepository.Insert(&kehadiran); err != nil {
+	if err := u.KehadiranRepository.Insert(&kehadiran); err != nil {
 		exception.PanicIfError(err)
 	}
 
@@ -76,21 +84,21 @@ func (service *kehadiranServiceImpl) CheckIn(request *model.KehadiranRequest) mo
 	return response
 }
 
-func (service *kehadiranServiceImpl) CheckOut(request *model.KehadiranRequest) model.KehadiranResponse {
+func (u *KehadiranUseCase) CheckOut(request *model.KehadiranRequest) model.KehadiranResponse {
 	if valid := validation.ValidateKehadiranRequest(request); valid != nil {
 		panic(exception.BadRequestError{
 			Message: "Invalid request data",
 		})
 	}
 
-	shift, err := service.ShiftRepository.FindByNama(request.ShiftNama)
+	shift, err := u.ShiftRepository.FindByNama(request.ShiftNama)
 	if err != nil {
 		panic(exception.NotFoundError{
 			Message: "Shift not found",
 		})
 	}
 
-	kehadiran, err := service.KehadiranRepository.FindLatestByNIP(request.NIP)
+	kehadiran, err := u.KehadiranRepository.FindLatestByNIP(request.NIP)
 	if err != nil {
 		panic(exception.NotFoundError{
 			Message: "Kehadiran not found",
@@ -101,7 +109,7 @@ func (service *kehadiranServiceImpl) CheckOut(request *model.KehadiranRequest) m
 
 	kehadiran.JamKeluar = jamKeluar
 
-	if err := service.KehadiranRepository.Update(&kehadiran); err != nil {
+	if err := u.KehadiranRepository.Update(&kehadiran); err != nil {
 		exception.PanicIfError(err)
 	}
 
@@ -122,8 +130,8 @@ func (service *kehadiranServiceImpl) CheckOut(request *model.KehadiranRequest) m
 	return response
 }
 
-func (service *kehadiranServiceImpl) GetAll() []model.KehadiranResponse {
-	kehadiran, err := service.KehadiranRepository.FindAll()
+func (u *KehadiranUseCase) GetAll() []model.KehadiranResponse {
+	kehadiran, err := u.KehadiranRepository.FindAll()
 	exception.PanicIfError(err)
 
 	response := make([]model.KehadiranResponse, len(kehadiran))
@@ -146,8 +154,8 @@ func (service *kehadiranServiceImpl) GetAll() []model.KehadiranResponse {
 	return response
 }
 
-func (service *kehadiranServiceImpl) GetByNIP(nip string) []model.KehadiranResponse {
-	kehadiran, err := service.KehadiranRepository.FindByNIP(nip)
+func (u *KehadiranUseCase) GetByNIP(nip string) []model.KehadiranResponse {
+	kehadiran, err := u.KehadiranRepository.FindByNIP(nip)
 	exception.PanicIfError(err)
 
 	response := make([]model.KehadiranResponse, len(kehadiran))
@@ -170,11 +178,11 @@ func (service *kehadiranServiceImpl) GetByNIP(nip string) []model.KehadiranRespo
 	return response
 }
 
-func (service *kehadiranServiceImpl) GetByID(id string) model.KehadiranResponse {
+func (u *KehadiranUseCase) GetByID(id string) model.KehadiranResponse {
 	kehadiranID, err := uuid.Parse(id)
 	exception.PanicIfError(err)
 
-	kehadiran, err := service.KehadiranRepository.FindByID(kehadiranID)
+	kehadiran, err := u.KehadiranRepository.FindByID(kehadiranID)
 	if err != nil {
 		panic(exception.NotFoundError{
 			Message: "Kehadiran not found",
@@ -198,7 +206,7 @@ func (service *kehadiranServiceImpl) GetByID(id string) model.KehadiranResponse 
 	return response
 }
 
-func (service *kehadiranServiceImpl) Update(id string, request *model.KehadiranUpdateRequest) model.KehadiranResponse {
+func (u *KehadiranUseCase) Update(id string, request *model.KehadiranUpdateRequest) model.KehadiranResponse {
 	if valid := validation.ValidateKehadiranUpdateRequest(request); valid != nil {
 		panic(exception.BadRequestError{
 			Message: "Invalid request data",
@@ -208,7 +216,7 @@ func (service *kehadiranServiceImpl) Update(id string, request *model.KehadiranU
 	kehadiranID, err := uuid.Parse(id)
 	exception.PanicIfError(err)
 
-	kehadiran, err := service.KehadiranRepository.FindByID(kehadiranID)
+	kehadiran, err := u.KehadiranRepository.FindByID(kehadiranID)
 	if err != nil {
 		panic(exception.NotFoundError{
 			Message: "Kehadiran not found",
@@ -230,7 +238,7 @@ func (service *kehadiranServiceImpl) Update(id string, request *model.KehadiranU
 	kehadiran.JamKeluar = jamKeluar
 	kehadiran.Keterangan = request.Keterangan
 
-	if err := service.KehadiranRepository.Update(&kehadiran); err != nil {
+	if err := u.KehadiranRepository.Update(&kehadiran); err != nil {
 		exception.PanicIfError(err)
 	}
 
@@ -252,22 +260,18 @@ func (service *kehadiranServiceImpl) Update(id string, request *model.KehadiranU
 
 }
 
-func (service *kehadiranServiceImpl) Delete(id string) {
+func (u *KehadiranUseCase) Delete(id string) {
 	kehadiranID, err := uuid.Parse(id)
 	exception.PanicIfError(err)
 
-	kehadiran, err := service.KehadiranRepository.FindByID(kehadiranID)
+	kehadiran, err := u.KehadiranRepository.FindByID(kehadiranID)
 	if err != nil {
 		panic(exception.NotFoundError{
 			Message: "Kehadiran not found",
 		})
 	}
 
-	if err := service.KehadiranRepository.Delete(&kehadiran); err != nil {
+	if err := u.KehadiranRepository.Delete(&kehadiran); err != nil {
 		exception.PanicIfError(err)
 	}
-}
-
-func NewKehadiranServiceProvider(repository *repository.KehadiranRepository, shiftRepository *repository.ShiftRepository) KehadiranService {
-	return &kehadiranServiceImpl{*repository, *shiftRepository}
 }

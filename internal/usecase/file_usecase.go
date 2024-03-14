@@ -6,18 +6,25 @@ import (
 	"github.com/fathoor/simkes-api/internal/helper"
 	"github.com/fathoor/simkes-api/internal/model"
 	"github.com/fathoor/simkes-api/internal/validation"
+	"github.com/samber/do"
 	"path"
 )
 
-type fileServiceImpl struct {
+type FileUseCase struct {
 	config.Config
 }
 
-func (service *fileServiceImpl) Upload(request *model.FileRequest) model.FileResponse {
+func NewFileUseCase(i *do.Injector) (*FileUseCase, error) {
+	return &FileUseCase{
+		do.MustInvoke[config.Config](i),
+	}, nil
+}
+
+func (u *FileUseCase) Upload(request *model.FileRequest) model.FileResponse {
 	file, err := validation.ValidateFileRequest(request)
 	exception.PanicIfError(err)
 
-	storage := service.Config.Get("APP_STORAGE")
+	storage := u.Config.Get("APP_STORAGE")
 
 	return model.FileResponse{
 		File: file,
@@ -25,14 +32,14 @@ func (service *fileServiceImpl) Upload(request *model.FileRequest) model.FileRes
 	}
 }
 
-func (service *fileServiceImpl) Get(filetype, filename string) string {
+func (u *FileUseCase) Get(filetype, filename string) string {
 	file, err := helper.GetFile(filetype, filename)
 	exception.PanicIfError(err)
 
 	return file
 }
 
-func (service *fileServiceImpl) Delete(filetype, filename string) {
+func (u *FileUseCase) Delete(filetype, filename string) {
 	filepath, err := helper.GetFile(filetype, filename)
 	exception.PanicIfError(err)
 
@@ -40,11 +47,5 @@ func (service *fileServiceImpl) Delete(filetype, filename string) {
 		panic(exception.InternalServerError{
 			Message: "Failed to delete file",
 		})
-	}
-}
-
-func NewFileServiceProvider() FileService {
-	return &fileServiceImpl{
-		Config: config.ProvideConfig(),
 	}
 }

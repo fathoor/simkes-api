@@ -6,13 +6,20 @@ import (
 	"github.com/fathoor/simkes-api/internal/model"
 	"github.com/fathoor/simkes-api/internal/repository"
 	"github.com/fathoor/simkes-api/internal/validation"
+	"github.com/samber/do"
 )
 
-type roleServiceImpl struct {
-	repository.RoleRepository
+type RoleUseCase struct {
+	RoleRepository *repository.RoleRepository
 }
 
-func (service *roleServiceImpl) Create(request *model.RoleRequest) model.RoleResponse {
+func NewRoleUseCase(i *do.Injector) (*RoleUseCase, error) {
+	return &RoleUseCase{
+		RoleRepository: do.MustInvoke[*repository.RoleRepository](i),
+	}, nil
+}
+
+func (u *RoleUseCase) Create(request *model.RoleRequest) model.RoleResponse {
 	if valid := validation.ValidateRoleRequest(request); valid != nil {
 		panic(exception.BadRequestError{
 			Message: "Invalid request data",
@@ -23,7 +30,7 @@ func (service *roleServiceImpl) Create(request *model.RoleRequest) model.RoleRes
 		Nama: request.Nama,
 	}
 
-	if err := service.RoleRepository.Insert(&role); err != nil {
+	if err := u.RoleRepository.Insert(&role); err != nil {
 		exception.PanicIfError(err)
 	}
 
@@ -34,8 +41,8 @@ func (service *roleServiceImpl) Create(request *model.RoleRequest) model.RoleRes
 	return response
 }
 
-func (service *roleServiceImpl) GetAll() []model.RoleResponse {
-	roles, err := service.RoleRepository.FindAll()
+func (u *RoleUseCase) GetAll() []model.RoleResponse {
+	roles, err := u.RoleRepository.FindAll()
 	exception.PanicIfError(err)
 
 	response := make([]model.RoleResponse, len(roles))
@@ -48,8 +55,8 @@ func (service *roleServiceImpl) GetAll() []model.RoleResponse {
 	return response
 }
 
-func (service *roleServiceImpl) GetByRole(r string) model.RoleResponse {
-	role, err := service.RoleRepository.FindByRole(r)
+func (u *RoleUseCase) GetByRole(r string) model.RoleResponse {
+	role, err := u.RoleRepository.FindByRole(r)
 	if err != nil {
 		panic(exception.NotFoundError{
 			Message: "Role not found",
@@ -63,7 +70,7 @@ func (service *roleServiceImpl) GetByRole(r string) model.RoleResponse {
 	return response
 }
 
-func (service *roleServiceImpl) Update(r string, request *model.RoleRequest) model.RoleResponse {
+func (u *RoleUseCase) Update(r string, request *model.RoleRequest) model.RoleResponse {
 	if r == "Admin" {
 		panic(exception.ForbiddenError{
 			Message: "Role Admin is forbidden to be updated",
@@ -76,7 +83,7 @@ func (service *roleServiceImpl) Update(r string, request *model.RoleRequest) mod
 		})
 	}
 
-	role, err := service.RoleRepository.FindByRole(r)
+	role, err := u.RoleRepository.FindByRole(r)
 	if err != nil {
 		panic(exception.NotFoundError{
 			Message: "Role not found",
@@ -85,7 +92,7 @@ func (service *roleServiceImpl) Update(r string, request *model.RoleRequest) mod
 
 	role.Nama = request.Nama
 
-	if err := service.RoleRepository.Update(&role); err != nil {
+	if err := u.RoleRepository.Update(&role); err != nil {
 		exception.PanicIfError(err)
 	}
 
@@ -96,25 +103,21 @@ func (service *roleServiceImpl) Update(r string, request *model.RoleRequest) mod
 	return response
 }
 
-func (service *roleServiceImpl) Delete(r string) {
+func (u *RoleUseCase) Delete(r string) {
 	if r == "Admin" {
 		panic(exception.ForbiddenError{
 			Message: "Role Admin is forbidden to be deleted",
 		})
 	}
 
-	role, err := service.RoleRepository.FindByRole(r)
+	role, err := u.RoleRepository.FindByRole(r)
 	if err != nil {
 		panic(exception.NotFoundError{
 			Message: "Role not found",
 		})
 	}
 
-	if err := service.RoleRepository.Delete(&role); err != nil {
+	if err := u.RoleRepository.Delete(&role); err != nil {
 		exception.PanicIfError(err)
 	}
-}
-
-func NewRoleServiceProvider(repository *repository.RoleRepository) RoleService {
-	return &roleServiceImpl{*repository}
 }

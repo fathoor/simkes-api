@@ -6,14 +6,21 @@ import (
 	"github.com/fathoor/simkes-api/internal/model"
 	"github.com/fathoor/simkes-api/internal/repository"
 	"github.com/fathoor/simkes-api/internal/validation"
+	"github.com/samber/do"
 	"time"
 )
 
-type pegawaiServiceImpl struct {
-	repository.PegawaiRepository
+type PegawaiUseCase struct {
+	PegawaiRepository *repository.PegawaiRepository
 }
 
-func (service *pegawaiServiceImpl) Create(request *model.PegawaiRequest) model.PegawaiResponse {
+func NewPegawaiUseCase(i *do.Injector) (*PegawaiUseCase, error) {
+	return &PegawaiUseCase{
+		PegawaiRepository: do.MustInvoke[*repository.PegawaiRepository](i),
+	}, nil
+}
+
+func (u *PegawaiUseCase) Create(request *model.PegawaiRequest) model.PegawaiResponse {
 	if valid := validation.ValidatePegawaiRequest(request); valid != nil {
 		panic(exception.BadRequestError{
 			Message: "Invalid request data",
@@ -45,7 +52,7 @@ func (service *pegawaiServiceImpl) Create(request *model.PegawaiRequest) model.P
 		Foto:           request.Foto,
 	}
 
-	if err := service.PegawaiRepository.Insert(&pegawai); err != nil {
+	if err := u.PegawaiRepository.Insert(&pegawai); err != nil {
 		exception.PanicIfError(err)
 	}
 
@@ -71,8 +78,8 @@ func (service *pegawaiServiceImpl) Create(request *model.PegawaiRequest) model.P
 	return response
 }
 
-func (service *pegawaiServiceImpl) GetAll() []model.PegawaiResponse {
-	pegawai, err := service.PegawaiRepository.FindAll()
+func (u *PegawaiUseCase) GetAll() []model.PegawaiResponse {
+	pegawai, err := u.PegawaiRepository.FindAll()
 	exception.PanicIfError(err)
 
 	response := make([]model.PegawaiResponse, len(pegawai))
@@ -100,8 +107,8 @@ func (service *pegawaiServiceImpl) GetAll() []model.PegawaiResponse {
 	return response
 }
 
-func (service *pegawaiServiceImpl) GetPage(page, size int) model.PegawaiPageResponse {
-	pegawai, total, err := service.PegawaiRepository.FindPage(page, size)
+func (u *PegawaiUseCase) GetPage(page, size int) model.PegawaiPageResponse {
+	pegawai, total, err := u.PegawaiRepository.FindPage(page, size)
 	exception.PanicIfError(err)
 
 	response := make([]model.PegawaiResponse, len(pegawai))
@@ -136,8 +143,8 @@ func (service *pegawaiServiceImpl) GetPage(page, size int) model.PegawaiPageResp
 	return pagedResponse
 }
 
-func (service *pegawaiServiceImpl) GetByNIP(nip string) model.PegawaiResponse {
-	pegawai, err := service.PegawaiRepository.FindByNIP(nip)
+func (u *PegawaiUseCase) GetByNIP(nip string) model.PegawaiResponse {
+	pegawai, err := u.PegawaiRepository.FindByNIP(nip)
 	if err != nil {
 		panic(exception.NotFoundError{
 			Message: "Pegawai not found",
@@ -166,14 +173,14 @@ func (service *pegawaiServiceImpl) GetByNIP(nip string) model.PegawaiResponse {
 	return response
 }
 
-func (service *pegawaiServiceImpl) Update(nip string, request *model.PegawaiRequest) model.PegawaiResponse {
+func (u *PegawaiUseCase) Update(nip string, request *model.PegawaiRequest) model.PegawaiResponse {
 	if valid := validation.ValidatePegawaiRequest(request); valid != nil {
 		panic(exception.BadRequestError{
 			Message: "Invalid request data",
 		})
 	}
 
-	pegawai, err := service.PegawaiRepository.FindByNIP(nip)
+	pegawai, err := u.PegawaiRepository.FindByNIP(nip)
 	if err != nil {
 		panic(exception.NotFoundError{
 			Message: "Pegawai not found",
@@ -202,7 +209,7 @@ func (service *pegawaiServiceImpl) Update(nip string, request *model.PegawaiRequ
 	pegawai.TanggalMasuk = tanggalMasuk
 	pegawai.Foto = request.Foto
 
-	if err := service.PegawaiRepository.Update(&pegawai); err != nil {
+	if err := u.PegawaiRepository.Update(&pegawai); err != nil {
 		exception.PanicIfError(err)
 	}
 
@@ -228,19 +235,15 @@ func (service *pegawaiServiceImpl) Update(nip string, request *model.PegawaiRequ
 	return response
 }
 
-func (service *pegawaiServiceImpl) Delete(nip string) {
-	pegawai, err := service.PegawaiRepository.FindByNIP(nip)
+func (u *PegawaiUseCase) Delete(nip string) {
+	pegawai, err := u.PegawaiRepository.FindByNIP(nip)
 	if err != nil {
 		panic(exception.NotFoundError{
 			Message: "Pegawai not found",
 		})
 	}
 
-	if err := service.PegawaiRepository.Delete(&pegawai); err != nil {
+	if err := u.PegawaiRepository.Delete(&pegawai); err != nil {
 		exception.PanicIfError(err)
 	}
-}
-
-func NewPegawaiServiceProvider(repository *repository.PegawaiRepository) PegawaiService {
-	return &pegawaiServiceImpl{*repository}
 }

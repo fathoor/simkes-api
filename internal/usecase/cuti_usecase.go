@@ -7,14 +7,21 @@ import (
 	"github.com/fathoor/simkes-api/internal/repository"
 	"github.com/fathoor/simkes-api/internal/validation"
 	"github.com/google/uuid"
+	"github.com/samber/do"
 	"time"
 )
 
-type cutiServiceImpl struct {
-	repository.CutiRepository
+type CutiUseCase struct {
+	CutiRepository *repository.CutiRepository
 }
 
-func (service *cutiServiceImpl) Create(request *model.CutiCreateRequest) model.CutiResponse {
+func NewCutiUseCase(i *do.Injector) (*CutiUseCase, error) {
+	return &CutiUseCase{
+		CutiRepository: do.MustInvoke[*repository.CutiRepository](i),
+	}, nil
+}
+
+func (u *CutiUseCase) Create(request *model.CutiCreateRequest) model.CutiResponse {
 	if valid := validation.ValidateCutiCreateRequest(request); valid != nil {
 		panic(exception.BadRequestError{
 			Message: "Invalid request data",
@@ -35,7 +42,7 @@ func (service *cutiServiceImpl) Create(request *model.CutiCreateRequest) model.C
 		Keterangan:     request.Keterangan,
 	}
 
-	if err := service.CutiRepository.Insert(&cuti); err != nil {
+	if err := u.CutiRepository.Insert(&cuti); err != nil {
 		exception.PanicIfError(err)
 	}
 
@@ -49,8 +56,8 @@ func (service *cutiServiceImpl) Create(request *model.CutiCreateRequest) model.C
 	}
 }
 
-func (service *cutiServiceImpl) GetAll() []model.CutiResponse {
-	cuti, err := service.CutiRepository.FindAll()
+func (u *CutiUseCase) GetAll() []model.CutiResponse {
+	cuti, err := u.CutiRepository.FindAll()
 	exception.PanicIfError(err)
 
 	response := make([]model.CutiResponse, len(cuti))
@@ -68,8 +75,8 @@ func (service *cutiServiceImpl) GetAll() []model.CutiResponse {
 	return response
 }
 
-func (service *cutiServiceImpl) GetByNIP(nip string) []model.CutiResponse {
-	cuti, err := service.CutiRepository.FindByNIP(nip)
+func (u *CutiUseCase) GetByNIP(nip string) []model.CutiResponse {
+	cuti, err := u.CutiRepository.FindByNIP(nip)
 	exception.PanicIfError(err)
 
 	response := make([]model.CutiResponse, len(cuti))
@@ -87,11 +94,11 @@ func (service *cutiServiceImpl) GetByNIP(nip string) []model.CutiResponse {
 	return response
 }
 
-func (service *cutiServiceImpl) GetByID(id string) model.CutiResponse {
+func (u *CutiUseCase) GetByID(id string) model.CutiResponse {
 	cutiID, err := uuid.Parse(id)
 	exception.PanicIfError(err)
 
-	cuti, err := service.CutiRepository.FindByID(cutiID)
+	cuti, err := u.CutiRepository.FindByID(cutiID)
 	if err != nil {
 		panic(exception.NotFoundError{
 			Message: "Cuti not found",
@@ -108,7 +115,7 @@ func (service *cutiServiceImpl) GetByID(id string) model.CutiResponse {
 	}
 }
 
-func (service *cutiServiceImpl) Update(id string, request *model.CutiUpdateRequest) model.CutiResponse {
+func (u *CutiUseCase) Update(id string, request *model.CutiUpdateRequest) model.CutiResponse {
 	if valid := validation.ValidateCutiUpdateRequest(request); valid != nil {
 		panic(exception.BadRequestError{
 			Message: "Invalid request data",
@@ -118,7 +125,7 @@ func (service *cutiServiceImpl) Update(id string, request *model.CutiUpdateReque
 	cutiID, err := uuid.Parse(id)
 	exception.PanicIfError(err)
 
-	cuti, err := service.CutiRepository.FindByID(cutiID)
+	cuti, err := u.CutiRepository.FindByID(cutiID)
 	if err != nil {
 		panic(exception.NotFoundError{
 			Message: "Cuti not found",
@@ -135,7 +142,7 @@ func (service *cutiServiceImpl) Update(id string, request *model.CutiUpdateReque
 	cuti.TanggalSelesai = tanggalSelesai
 	cuti.Keterangan = request.Keterangan
 
-	if err := service.CutiRepository.Update(&cuti); err != nil {
+	if err := u.CutiRepository.Update(&cuti); err != nil {
 		exception.PanicIfError(err)
 	}
 
@@ -149,7 +156,7 @@ func (service *cutiServiceImpl) Update(id string, request *model.CutiUpdateReque
 	}
 }
 
-func (service *cutiServiceImpl) UpdateStatus(id string, request *model.CutiUpdateRequest) model.CutiResponse {
+func (u *CutiUseCase) UpdateStatus(id string, request *model.CutiUpdateRequest) model.CutiResponse {
 	if valid := validation.ValidateCutiUpdateRequest(request); valid != nil {
 		panic(exception.BadRequestError{
 			Message: "Invalid request data",
@@ -159,7 +166,7 @@ func (service *cutiServiceImpl) UpdateStatus(id string, request *model.CutiUpdat
 	cutiID, err := uuid.Parse(id)
 	exception.PanicIfError(err)
 
-	cuti, err := service.CutiRepository.FindByID(cutiID)
+	cuti, err := u.CutiRepository.FindByID(cutiID)
 	if err != nil {
 		panic(exception.NotFoundError{
 			Message: "Cuti not found",
@@ -177,7 +184,7 @@ func (service *cutiServiceImpl) UpdateStatus(id string, request *model.CutiUpdat
 	cuti.Keterangan = request.Keterangan
 	cuti.Status = request.Status
 
-	if err := service.CutiRepository.Update(&cuti); err != nil {
+	if err := u.CutiRepository.Update(&cuti); err != nil {
 		exception.PanicIfError(err)
 	}
 
@@ -191,22 +198,18 @@ func (service *cutiServiceImpl) UpdateStatus(id string, request *model.CutiUpdat
 	}
 }
 
-func (service *cutiServiceImpl) Delete(id string) {
+func (u *CutiUseCase) Delete(id string) {
 	cutiID, err := uuid.Parse(id)
 	exception.PanicIfError(err)
 
-	cuti, err := service.CutiRepository.FindByID(cutiID)
+	cuti, err := u.CutiRepository.FindByID(cutiID)
 	if err != nil {
 		panic(exception.NotFoundError{
 			Message: "Cuti not found",
 		})
 	}
 
-	if err := service.CutiRepository.Delete(&cuti); err != nil {
+	if err := u.CutiRepository.Delete(&cuti); err != nil {
 		exception.PanicIfError(err)
 	}
-}
-
-func NewCutiServiceProvider(repository *repository.CutiRepository) CutiService {
-	return &cutiServiceImpl{*repository}
 }
