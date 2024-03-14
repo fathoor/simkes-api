@@ -2,25 +2,29 @@ package controller
 
 import (
 	"github.com/fathoor/simkes-api/internal/exception"
-	web "github.com/fathoor/simkes-api/internal/model"
+	"github.com/fathoor/simkes-api/internal/model"
 	"github.com/fathoor/simkes-api/internal/usecase"
 	"github.com/gofiber/fiber/v2"
+	"github.com/rs/zerolog"
 	"github.com/samber/do"
 )
 
 type FileController struct {
 	FileUseCase *usecase.FileUseCase
+	Log         *zerolog.Logger
 }
 
 func NewFileController(i *do.Injector) (*FileController, error) {
 	return &FileController{
 		FileUseCase: do.MustInvoke[*usecase.FileUseCase](i),
+		Log:         do.MustInvoke[*zerolog.Logger](i),
 	}, nil
 }
 
 func (c *FileController) Upload(ctx *fiber.Ctx) error {
 	file, err := ctx.FormFile("file")
 	if err != nil {
+		c.Log.Error().Err(err).Msg("No file uploaded")
 		panic(exception.BadRequestError{
 			Message: "No file uploaded",
 		})
@@ -28,7 +32,7 @@ func (c *FileController) Upload(ctx *fiber.Ctx) error {
 
 	fileType := ctx.FormValue("type")
 
-	request := web.FileRequest{
+	request := model.FileRequest{
 		File: file,
 		Type: fileType,
 	}
@@ -36,12 +40,13 @@ func (c *FileController) Upload(ctx *fiber.Ctx) error {
 	response := c.FileUseCase.Upload(&request)
 
 	if err := ctx.SaveFile(file, response.Path); err != nil {
+		c.Log.Error().Err(err).Msg("Failed to save file")
 		panic(exception.InternalServerError{
 			Message: "Failed to save file",
 		})
 	}
 
-	return ctx.Status(fiber.StatusOK).JSON(web.Response{
+	return ctx.Status(fiber.StatusOK).JSON(model.WebResponse{
 		Code:   fiber.StatusOK,
 		Status: "OK",
 		Data:   response,

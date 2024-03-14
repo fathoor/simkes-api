@@ -2,26 +2,30 @@ package controller
 
 import (
 	"github.com/fathoor/simkes-api/internal/exception"
-	web "github.com/fathoor/simkes-api/internal/model"
+	"github.com/fathoor/simkes-api/internal/model"
 	"github.com/fathoor/simkes-api/internal/usecase"
 	"github.com/gofiber/fiber/v2"
+	"github.com/rs/zerolog"
 	"github.com/samber/do"
 )
 
 type PegawaiController struct {
 	PegawaiUseCase *usecase.PegawaiUseCase
+	Log            *zerolog.Logger
 }
 
 func NewPegawaiController(i *do.Injector) (*PegawaiController, error) {
 	return &PegawaiController{
 		PegawaiUseCase: do.MustInvoke[*usecase.PegawaiUseCase](i),
+		Log:            do.MustInvoke[*zerolog.Logger](i),
 	}, nil
 }
 
 func (c *PegawaiController) Create(ctx *fiber.Ctx) error {
-	var request web.PegawaiRequest
+	var request model.PegawaiRequest
 
 	if parse := ctx.BodyParser(&request); parse != nil {
+		c.Log.Error().Err(parse).Msg("Invalid request body")
 		panic(exception.BadRequestError{
 			Message: "Invalid request body",
 		})
@@ -29,7 +33,7 @@ func (c *PegawaiController) Create(ctx *fiber.Ctx) error {
 
 	response := c.PegawaiUseCase.Create(&request)
 
-	return ctx.Status(fiber.StatusCreated).JSON(web.Response{
+	return ctx.Status(fiber.StatusCreated).JSON(model.WebResponse{
 		Code:   fiber.StatusCreated,
 		Status: "Created",
 		Data:   response,
@@ -47,7 +51,7 @@ func (c *PegawaiController) Get(ctx *fiber.Ctx) error {
 	if page < 1 {
 		response := c.PegawaiUseCase.GetAll()
 
-		return ctx.Status(fiber.StatusOK).JSON(web.Response{
+		return ctx.Status(fiber.StatusOK).JSON(model.WebResponse{
 			Code:   fiber.StatusOK,
 			Status: "OK",
 			Data:   response,
@@ -55,7 +59,7 @@ func (c *PegawaiController) Get(ctx *fiber.Ctx) error {
 	} else {
 		response := c.PegawaiUseCase.GetPage(page, size)
 
-		return ctx.Status(fiber.StatusOK).JSON(web.Response{
+		return ctx.Status(fiber.StatusOK).JSON(model.WebResponse{
 			Code:   fiber.StatusOK,
 			Status: "OK",
 			Data:   response,
@@ -68,7 +72,7 @@ func (c *PegawaiController) GetByNIP(ctx *fiber.Ctx) error {
 
 	response := c.PegawaiUseCase.GetByNIP(nip)
 
-	return ctx.Status(fiber.StatusOK).JSON(web.Response{
+	return ctx.Status(fiber.StatusOK).JSON(model.WebResponse{
 		Code:   fiber.StatusOK,
 		Status: "OK",
 		Data:   response,
@@ -76,9 +80,10 @@ func (c *PegawaiController) GetByNIP(ctx *fiber.Ctx) error {
 }
 
 func (c *PegawaiController) Update(ctx *fiber.Ctx) error {
-	var request web.PegawaiRequest
+	var request model.PegawaiRequest
 
 	if parse := ctx.BodyParser(&request); parse != nil {
+		c.Log.Error().Err(parse).Msg("Invalid request body")
 		panic(exception.BadRequestError{
 			Message: "Invalid request body",
 		})
@@ -88,7 +93,7 @@ func (c *PegawaiController) Update(ctx *fiber.Ctx) error {
 
 	response := c.PegawaiUseCase.Update(nip, &request)
 
-	return ctx.Status(fiber.StatusOK).JSON(web.Response{
+	return ctx.Status(fiber.StatusOK).JSON(model.WebResponse{
 		Code:   fiber.StatusOK,
 		Status: "OK",
 		Data:   response,

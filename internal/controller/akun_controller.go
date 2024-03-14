@@ -2,27 +2,31 @@ package controller
 
 import (
 	"github.com/fathoor/simkes-api/internal/exception"
-	web "github.com/fathoor/simkes-api/internal/model"
+	"github.com/fathoor/simkes-api/internal/model"
 	"github.com/fathoor/simkes-api/internal/usecase"
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/rs/zerolog"
 	"github.com/samber/do"
 )
 
 type AkunController struct {
 	AkunUseCase *usecase.AkunUseCase
+	Log         *zerolog.Logger
 }
 
 func NewAkunController(i *do.Injector) (*AkunController, error) {
 	return &AkunController{
 		AkunUseCase: do.MustInvoke[*usecase.AkunUseCase](i),
+		Log:         do.MustInvoke[*zerolog.Logger](i),
 	}, nil
 }
 
 func (c *AkunController) Create(ctx *fiber.Ctx) error {
-	var request web.AkunRequest
+	var request model.AkunRequest
 
 	if parse := ctx.BodyParser(&request); parse != nil {
+		c.Log.Error().Err(parse).Msg("Invalid request body")
 		panic(exception.BadRequestError{
 			Message: "Invalid request body",
 		})
@@ -30,7 +34,7 @@ func (c *AkunController) Create(ctx *fiber.Ctx) error {
 
 	response := c.AkunUseCase.Create(&request)
 
-	return ctx.Status(fiber.StatusCreated).JSON(web.Response{
+	return ctx.Status(fiber.StatusCreated).JSON(model.WebResponse{
 		Code:   fiber.StatusCreated,
 		Status: "Created",
 		Data:   response,
@@ -48,7 +52,7 @@ func (c *AkunController) Get(ctx *fiber.Ctx) error {
 	if page < 1 {
 		response := c.AkunUseCase.GetAll()
 
-		return ctx.Status(fiber.StatusOK).JSON(web.Response{
+		return ctx.Status(fiber.StatusOK).JSON(model.WebResponse{
 			Code:   fiber.StatusOK,
 			Status: "OK",
 			Data:   response,
@@ -56,7 +60,7 @@ func (c *AkunController) Get(ctx *fiber.Ctx) error {
 	} else {
 		response := c.AkunUseCase.GetPage(page, size)
 
-		return ctx.Status(fiber.StatusOK).JSON(web.Response{
+		return ctx.Status(fiber.StatusOK).JSON(model.WebResponse{
 			Code:   fiber.StatusOK,
 			Status: "OK",
 			Data:   response,
@@ -69,7 +73,7 @@ func (c *AkunController) GetByNIP(ctx *fiber.Ctx) error {
 
 	response := c.AkunUseCase.GetByNIP(nip)
 
-	return ctx.Status(fiber.StatusOK).JSON(web.Response{
+	return ctx.Status(fiber.StatusOK).JSON(model.WebResponse{
 		Code:   fiber.StatusOK,
 		Status: "OK",
 		Data:   response,
@@ -77,12 +81,13 @@ func (c *AkunController) GetByNIP(ctx *fiber.Ctx) error {
 }
 
 func (c *AkunController) Update(ctx *fiber.Ctx) error {
-	var request web.AkunRequest
+	var request model.AkunRequest
 
 	claims := ctx.Locals("user").(*jwt.Token).Claims.(jwt.MapClaims)
 	role := claims["role"].(string)
 
 	if parse := ctx.BodyParser(&request); parse != nil {
+		c.Log.Error().Err(parse).Msg("Invalid request body")
 		panic(exception.BadRequestError{
 			Message: "Invalid request body",
 		})
@@ -93,7 +98,7 @@ func (c *AkunController) Update(ctx *fiber.Ctx) error {
 	if role == "Admin" {
 		response := c.AkunUseCase.UpdateAdmin(nip, &request)
 
-		return ctx.Status(fiber.StatusOK).JSON(web.Response{
+		return ctx.Status(fiber.StatusOK).JSON(model.WebResponse{
 			Code:   fiber.StatusOK,
 			Status: "OK",
 			Data:   response,
@@ -101,7 +106,7 @@ func (c *AkunController) Update(ctx *fiber.Ctx) error {
 	} else {
 		response := c.AkunUseCase.Update(nip, &request)
 
-		return ctx.Status(fiber.StatusOK).JSON(web.Response{
+		return ctx.Status(fiber.StatusOK).JSON(model.WebResponse{
 			Code:   fiber.StatusOK,
 			Status: "OK",
 			Data:   response,

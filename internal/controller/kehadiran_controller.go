@@ -2,26 +2,30 @@ package controller
 
 import (
 	"github.com/fathoor/simkes-api/internal/exception"
-	web "github.com/fathoor/simkes-api/internal/model"
+	"github.com/fathoor/simkes-api/internal/model"
 	"github.com/fathoor/simkes-api/internal/usecase"
 	"github.com/gofiber/fiber/v2"
+	"github.com/rs/zerolog"
 	"github.com/samber/do"
 )
 
 type KehadiranController struct {
 	KehadiranUseCase *usecase.KehadiranUseCase
+	Log              *zerolog.Logger
 }
 
 func NewKehadiranController(i *do.Injector) (*KehadiranController, error) {
 	return &KehadiranController{
 		KehadiranUseCase: do.MustInvoke[*usecase.KehadiranUseCase](i),
+		Log:              do.MustInvoke[*zerolog.Logger](i),
 	}, nil
 }
 
 func (c *KehadiranController) CheckIn(ctx *fiber.Ctx) error {
-	var request web.KehadiranRequest
+	var request model.KehadiranRequest
 
 	if parse := ctx.BodyParser(&request); parse != nil {
+		c.Log.Error().Err(parse).Msg("Invalid request body")
 		panic(exception.BadRequestError{
 			Message: "Invalid request body",
 		})
@@ -29,7 +33,7 @@ func (c *KehadiranController) CheckIn(ctx *fiber.Ctx) error {
 
 	response := c.KehadiranUseCase.CheckIn(&request)
 
-	return ctx.Status(fiber.StatusCreated).JSON(web.Response{
+	return ctx.Status(fiber.StatusCreated).JSON(model.WebResponse{
 		Code:   fiber.StatusCreated,
 		Status: "Created",
 		Data:   response,
@@ -37,9 +41,10 @@ func (c *KehadiranController) CheckIn(ctx *fiber.Ctx) error {
 }
 
 func (c *KehadiranController) CheckOut(ctx *fiber.Ctx) error {
-	var request web.KehadiranRequest
+	var request model.KehadiranRequest
 
 	if parse := ctx.BodyParser(&request); parse != nil {
+		c.Log.Error().Err(parse).Msg("Invalid request body")
 		panic(exception.BadRequestError{
 			Message: "Invalid request body",
 		})
@@ -47,7 +52,7 @@ func (c *KehadiranController) CheckOut(ctx *fiber.Ctx) error {
 
 	response := c.KehadiranUseCase.CheckOut(&request)
 
-	return ctx.Status(fiber.StatusOK).JSON(web.Response{
+	return ctx.Status(fiber.StatusOK).JSON(model.WebResponse{
 		Code:   fiber.StatusOK,
 		Status: "OK",
 		Data:   response,
@@ -60,7 +65,7 @@ func (c *KehadiranController) Get(ctx *fiber.Ctx) error {
 	if nip != "" {
 		response := c.KehadiranUseCase.GetByNIP(nip)
 
-		return ctx.Status(fiber.StatusOK).JSON(web.Response{
+		return ctx.Status(fiber.StatusOK).JSON(model.WebResponse{
 			Code:   fiber.StatusOK,
 			Status: "OK",
 			Data:   response,
@@ -68,7 +73,7 @@ func (c *KehadiranController) Get(ctx *fiber.Ctx) error {
 	} else {
 		response := c.KehadiranUseCase.GetAll()
 
-		return ctx.Status(fiber.StatusOK).JSON(web.Response{
+		return ctx.Status(fiber.StatusOK).JSON(model.WebResponse{
 			Code:   fiber.StatusOK,
 			Status: "OK",
 			Data:   response,
@@ -81,7 +86,7 @@ func (c *KehadiranController) GetByID(ctx *fiber.Ctx) error {
 
 	response := c.KehadiranUseCase.GetByID(id)
 
-	return ctx.Status(fiber.StatusOK).JSON(web.Response{
+	return ctx.Status(fiber.StatusOK).JSON(model.WebResponse{
 		Code:   fiber.StatusOK,
 		Status: "OK",
 		Data:   response,
@@ -89,9 +94,10 @@ func (c *KehadiranController) GetByID(ctx *fiber.Ctx) error {
 }
 
 func (c *KehadiranController) Update(ctx *fiber.Ctx) error {
-	var request web.KehadiranUpdateRequest
+	var request model.KehadiranUpdateRequest
 
 	if parse := ctx.BodyParser(&request); parse != nil {
+		c.Log.Error().Err(parse).Msg("Invalid request body")
 		panic(exception.BadRequestError{
 			Message: "Invalid request body",
 		})
@@ -101,7 +107,7 @@ func (c *KehadiranController) Update(ctx *fiber.Ctx) error {
 
 	response := c.KehadiranUseCase.Update(id, &request)
 
-	return ctx.Status(fiber.StatusOK).JSON(web.Response{
+	return ctx.Status(fiber.StatusOK).JSON(model.WebResponse{
 		Code:   fiber.StatusOK,
 		Status: "OK",
 		Data:   response,
