@@ -1,10 +1,17 @@
 package validation
 
 import (
-	"github.com/fathoor/simkes-api/internal/config"
+	"github.com/fathoor/simkes-api/internal/exception"
 	"github.com/fathoor/simkes-api/internal/model"
+	"github.com/go-playground/validator/v10"
+	"github.com/rs/zerolog"
 )
 
-func ValidatePegawaiRequest(request *model.PegawaiRequest) error {
-	return config.Validator.Struct(request)
+func ValidatePegawaiRequest(validator *validator.Validate, log *zerolog.Logger, request *model.PegawaiRequest) {
+	if err := validator.Struct(request); err != nil {
+		log.Error().Err(err).Msg("Validation error")
+		panic(&exception.BadRequestError{
+			Message: "Invalid request",
+		})
+	}
 }

@@ -7,28 +7,35 @@ import (
 	"github.com/fathoor/simkes-api/internal/model"
 	"github.com/fathoor/simkes-api/internal/repository"
 	"github.com/fathoor/simkes-api/internal/validation"
+	"github.com/go-playground/validator/v10"
+	"github.com/rs/zerolog"
 	"github.com/samber/do"
 )
 
 type AkunUseCase struct {
 	AkunRepository *repository.AkunRepository
+	Log            *zerolog.Logger
+	Validator      *validator.Validate
 }
 
 func NewAkunUseCase(i *do.Injector) (*AkunUseCase, error) {
 	return &AkunUseCase{
 		AkunRepository: do.MustInvoke[*repository.AkunRepository](i),
+		Log:            do.MustInvoke[*zerolog.Logger](i),
+		Validator:      do.MustInvoke[*validator.Validate](i),
 	}, nil
 }
 
 func (u *AkunUseCase) Create(request *model.AkunRequest) model.AkunResponse {
-	if valid := validation.ValidateAkunRequest(request); valid != nil {
-		panic(exception.BadRequestError{
-			Message: "Invalid request data",
-		})
-	}
+	validation.ValidateAkunRequest(u.Validator, u.Log, request)
 
 	encrypted, err := helper.EncryptPassword(request.Password)
-	exception.PanicIfError(err)
+	if err != nil {
+		u.Log.Error().Err(err).Msg("Failed to encrypt password")
+		panic(exception.InternalServerError{
+			Message: "Failed to encrypt password",
+		})
+	}
 
 	akun := entity.Akun{
 		NIP:      request.NIP,
@@ -38,7 +45,10 @@ func (u *AkunUseCase) Create(request *model.AkunRequest) model.AkunResponse {
 	}
 
 	if err := u.AkunRepository.Insert(&akun); err != nil {
-		exception.PanicIfError(err)
+		u.Log.Error().Err(err).Msg("Failed to create akun")
+		panic(exception.InternalServerError{
+			Message: "Failed to create akun",
+		})
 	}
 
 	response := model.AkunResponse{
@@ -52,7 +62,12 @@ func (u *AkunUseCase) Create(request *model.AkunRequest) model.AkunResponse {
 
 func (u *AkunUseCase) GetAll() []model.AkunResponse {
 	akun, err := u.AkunRepository.FindAll()
-	exception.PanicIfError(err)
+	if err != nil {
+		u.Log.Error().Err(err).Msg("Failed to get akun")
+		panic(exception.InternalServerError{
+			Message: "Failed to get akun",
+		})
+	}
 
 	response := make([]model.AkunResponse, len(akun))
 	for i, akun := range akun {
@@ -68,7 +83,12 @@ func (u *AkunUseCase) GetAll() []model.AkunResponse {
 
 func (u *AkunUseCase) GetPage(page, size int) model.AkunPageResponse {
 	akun, total, err := u.AkunRepository.FindPage(page, size)
-	exception.PanicIfError(err)
+	if err != nil {
+		u.Log.Error().Err(err).Msg("Failed to get akun")
+		panic(exception.InternalServerError{
+			Message: "Failed to get akun",
+		})
+	}
 
 	response := make([]model.AkunResponse, len(akun))
 	for i, akun := range akun {
@@ -92,6 +112,7 @@ func (u *AkunUseCase) GetPage(page, size int) model.AkunPageResponse {
 func (u *AkunUseCase) GetByNIP(nip string) model.AkunResponse {
 	akun, err := u.AkunRepository.FindByNIP(nip)
 	if err != nil {
+		u.Log.Info().Str("nip", nip).Msg("Akun not found")
 		panic(exception.NotFoundError{
 			Message: "Akun not found",
 		})
@@ -107,14 +128,11 @@ func (u *AkunUseCase) GetByNIP(nip string) model.AkunResponse {
 }
 
 func (u *AkunUseCase) Update(nip string, request *model.AkunRequest) model.AkunResponse {
-	if valid := validation.ValidateAkunRequest(request); valid != nil {
-		panic(exception.BadRequestError{
-			Message: "Invalid request data",
-		})
-	}
+	validation.ValidateAkunRequest(u.Validator, u.Log, request)
 
 	akun, err := u.AkunRepository.FindByNIP(nip)
 	if err != nil {
+		u.Log.Info().Str("nip", nip).Msg("Akun not found")
 		panic(exception.NotFoundError{
 			Message: "Akun not found",
 		})
@@ -122,7 +140,12 @@ func (u *AkunUseCase) Update(nip string, request *model.AkunRequest) model.AkunR
 
 	if request.Password != "" {
 		encrypted, err := helper.EncryptPassword(request.Password)
-		exception.PanicIfError(err)
+		if err != nil {
+			u.Log.Error().Err(err).Msg("Failed to encrypt password")
+			panic(exception.InternalServerError{
+				Message: "Failed to encrypt password",
+			})
+		}
 
 		akun.Password = string(encrypted)
 	}
@@ -136,21 +159,23 @@ func (u *AkunUseCase) Update(nip string, request *model.AkunRequest) model.AkunR
 	}
 
 	if err := u.AkunRepository.Update(&akun); err != nil {
-		exception.PanicIfError(err)
+		if err != nil {
+			u.Log.Error().Err(err).Msg("Failed to update akun")
+			panic(exception.InternalServerError{
+				Message: "Failed to update akun",
+			})
+		}
 	}
 
 	return response
 }
 
 func (u *AkunUseCase) UpdateAdmin(nip string, request *model.AkunRequest) model.AkunResponse {
-	if valid := validation.ValidateAkunRequest(request); valid != nil {
-		panic(exception.BadRequestError{
-			Message: "Invalid request data",
-		})
-	}
+	validation.ValidateAkunRequest(u.Validator, u.Log, request)
 
 	akun, err := u.AkunRepository.FindByNIP(nip)
 	if err != nil {
+		u.Log.Info().Str("nip", nip).Msg("Akun not found")
 		panic(exception.NotFoundError{
 			Message: "Akun not found",
 		})
@@ -158,7 +183,12 @@ func (u *AkunUseCase) UpdateAdmin(nip string, request *model.AkunRequest) model.
 
 	if request.Password != "" {
 		encrypted, err := helper.EncryptPassword(request.Password)
-		exception.PanicIfError(err)
+		if err != nil {
+			u.Log.Error().Err(err).Msg("Failed to encrypt password")
+			panic(exception.InternalServerError{
+				Message: "Failed to encrypt password",
+			})
+		}
 
 		akun.Password = string(encrypted)
 	}
@@ -174,7 +204,12 @@ func (u *AkunUseCase) UpdateAdmin(nip string, request *model.AkunRequest) model.
 	}
 
 	if err := u.AkunRepository.Update(&akun); err != nil {
-		exception.PanicIfError(err)
+		if err != nil {
+			u.Log.Error().Err(err).Msg("Failed to update akun")
+			panic(exception.InternalServerError{
+				Message: "Failed to update akun",
+			})
+		}
 	}
 
 	return response
@@ -183,12 +218,16 @@ func (u *AkunUseCase) UpdateAdmin(nip string, request *model.AkunRequest) model.
 func (u *AkunUseCase) Delete(nip string) {
 	akun, err := u.AkunRepository.FindByNIP(nip)
 	if err != nil {
+		u.Log.Info().Str("nip", nip).Msg("Akun not found")
 		panic(exception.NotFoundError{
 			Message: "Akun not found",
 		})
 	}
 
 	if err := u.AkunRepository.Delete(&akun); err != nil {
-		exception.PanicIfError(err)
+		u.Log.Error().Err(err).Msg("Failed to delete akun")
+		panic(exception.InternalServerError{
+			Message: "Failed to delete akun",
+		})
 	}
 }

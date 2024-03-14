@@ -2,16 +2,16 @@ package validation
 
 import (
 	"fmt"
-	"github.com/fathoor/simkes-api/internal/config"
 	"github.com/fathoor/simkes-api/internal/exception"
 	"github.com/fathoor/simkes-api/internal/helper"
 	"github.com/fathoor/simkes-api/internal/model"
+	"github.com/go-playground/validator/v10"
 	"path"
 )
 
-func ValidateFileRequest(request *model.FileRequest) (string, error) {
-	if valid := config.Validator.Struct(request); valid != nil {
-		return "", exception.BadRequestError{
+func ValidateFileRequest(validator *validator.Validate, request *model.FileRequest) (string, error) {
+	if valid := validator.Struct(request); valid != nil {
+		return "", &exception.BadRequestError{
 			Message: "Invalid request data",
 		}
 	}
@@ -20,31 +20,31 @@ func ValidateFileRequest(request *model.FileRequest) (string, error) {
 	case "image":
 		ext := path.Ext(request.File.Filename)
 		if ext != ".png" && ext != ".jpg" && ext != ".jpeg" {
-			return "", exception.BadRequestError{
+			return "", &exception.BadRequestError{
 				Message: fmt.Sprintf("Invalid file extension: %s is not supported", ext),
 			}
 		}
 
 		if request.File.Size > 2*1024*1024 {
-			return "", exception.BadRequestError{
+			return "", &exception.BadRequestError{
 				Message: "File size exceeds limit",
 			}
 		}
 	case "doc":
 		ext := path.Ext(request.File.Filename)
 		if ext != ".pdf" && ext != ".doc" && ext != ".docx" {
-			return "", exception.BadRequestError{
+			return "", &exception.BadRequestError{
 				Message: fmt.Sprintf("Invalid file extension: %s is not supported", ext),
 			}
 		}
 
 		if request.File.Size > 5*1024*1024 {
-			return "", exception.BadRequestError{
+			return "", &exception.BadRequestError{
 				Message: "File size exceeds limit",
 			}
 		}
 	default:
-		return "", exception.BadRequestError{
+		return "", &exception.BadRequestError{
 			Message: fmt.Sprintf("Invalid file type: %s is not supported", request.Type),
 		}
 	}

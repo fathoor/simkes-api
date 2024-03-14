@@ -6,33 +6,45 @@ import (
 	"github.com/fathoor/simkes-api/internal/model"
 	"github.com/fathoor/simkes-api/internal/repository"
 	"github.com/fathoor/simkes-api/internal/validation"
+	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
+	"github.com/rs/zerolog"
 	"github.com/samber/do"
 	"time"
 )
 
 type CutiUseCase struct {
 	CutiRepository *repository.CutiRepository
+	Log            *zerolog.Logger
+	Validator      *validator.Validate
 }
 
 func NewCutiUseCase(i *do.Injector) (*CutiUseCase, error) {
 	return &CutiUseCase{
 		CutiRepository: do.MustInvoke[*repository.CutiRepository](i),
+		Log:            do.MustInvoke[*zerolog.Logger](i),
+		Validator:      do.MustInvoke[*validator.Validate](i),
 	}, nil
 }
 
 func (u *CutiUseCase) Create(request *model.CutiCreateRequest) model.CutiResponse {
-	if valid := validation.ValidateCutiCreateRequest(request); valid != nil {
+	validation.ValidateCutiCreateRequest(u.Validator, u.Log, request)
+
+	tanggalMulai, err := time.Parse("2006-01-02", request.TanggalMulai)
+	if err != nil {
+		u.Log.Info().Str("tanggal_mulai", request.TanggalMulai).Msg("Invalid date format")
 		panic(exception.BadRequestError{
-			Message: "Invalid request data",
+			Message: "Invalid date format",
 		})
 	}
 
-	tanggalMulai, err := time.Parse("2006-01-02", request.TanggalMulai)
-	exception.PanicIfError(err)
-
 	tanggalSelesai, err := time.Parse("2006-01-02", request.TanggalSelesai)
-	exception.PanicIfError(err)
+	if err != nil {
+		u.Log.Info().Str("tanggal_selesai", request.TanggalSelesai).Msg("Invalid date format")
+		panic(exception.BadRequestError{
+			Message: "Invalid date format",
+		})
+	}
 
 	cuti := entity.Cuti{
 		ID:             uuid.New(),
@@ -43,7 +55,10 @@ func (u *CutiUseCase) Create(request *model.CutiCreateRequest) model.CutiRespons
 	}
 
 	if err := u.CutiRepository.Insert(&cuti); err != nil {
-		exception.PanicIfError(err)
+		u.Log.Error().Err(err).Msg("Failed to insert cuti")
+		panic(exception.InternalServerError{
+			Message: "Failed to insert cuti",
+		})
 	}
 
 	return model.CutiResponse{
@@ -58,7 +73,12 @@ func (u *CutiUseCase) Create(request *model.CutiCreateRequest) model.CutiRespons
 
 func (u *CutiUseCase) GetAll() []model.CutiResponse {
 	cuti, err := u.CutiRepository.FindAll()
-	exception.PanicIfError(err)
+	if err != nil {
+		u.Log.Error().Err(err).Msg("Failed to get cuti")
+		panic(exception.InternalServerError{
+			Message: "Failed to get cuti",
+		})
+	}
 
 	response := make([]model.CutiResponse, len(cuti))
 	for i, cuti := range cuti {
@@ -77,7 +97,12 @@ func (u *CutiUseCase) GetAll() []model.CutiResponse {
 
 func (u *CutiUseCase) GetByNIP(nip string) []model.CutiResponse {
 	cuti, err := u.CutiRepository.FindByNIP(nip)
-	exception.PanicIfError(err)
+	if err != nil {
+		u.Log.Info().Str("nip", nip).Msg("Cuti not found")
+		panic(exception.NotFoundError{
+			Message: "Cuti not found",
+		})
+	}
 
 	response := make([]model.CutiResponse, len(cuti))
 	for i, cuti := range cuti {
@@ -96,10 +121,16 @@ func (u *CutiUseCase) GetByNIP(nip string) []model.CutiResponse {
 
 func (u *CutiUseCase) GetByID(id string) model.CutiResponse {
 	cutiID, err := uuid.Parse(id)
-	exception.PanicIfError(err)
+	if err != nil {
+		u.Log.Info().Str("id", id).Msg("Invalid UUID")
+		panic(exception.BadRequestError{
+			Message: "Invalid UUID",
+		})
+	}
 
 	cuti, err := u.CutiRepository.FindByID(cutiID)
 	if err != nil {
+		u.Log.Info().Str("id", id).Msg("Cuti not found")
 		panic(exception.NotFoundError{
 			Message: "Cuti not found",
 		})
@@ -116,34 +147,49 @@ func (u *CutiUseCase) GetByID(id string) model.CutiResponse {
 }
 
 func (u *CutiUseCase) Update(id string, request *model.CutiUpdateRequest) model.CutiResponse {
-	if valid := validation.ValidateCutiUpdateRequest(request); valid != nil {
+	validation.ValidateCutiUpdateRequest(u.Validator, u.Log, request)
+
+	cutiID, err := uuid.Parse(id)
+	if err != nil {
+		u.Log.Info().Str("id", id).Msg("Invalid UUID")
 		panic(exception.BadRequestError{
-			Message: "Invalid request data",
+			Message: "Invalid UUID",
 		})
 	}
 
-	cutiID, err := uuid.Parse(id)
-	exception.PanicIfError(err)
-
 	cuti, err := u.CutiRepository.FindByID(cutiID)
 	if err != nil {
+		u.Log.Info().Str("id", id).Msg("Cuti not found")
 		panic(exception.NotFoundError{
 			Message: "Cuti not found",
 		})
 	}
 
 	tanggalMulai, err := time.Parse("2006-01-02", request.TanggalMulai)
-	exception.PanicIfError(err)
+	if err != nil {
+		u.Log.Info().Str("tanggal_mulai", request.TanggalMulai).Msg("Invalid date format")
+		panic(exception.BadRequestError{
+			Message: "Invalid date format",
+		})
+	}
 
 	tanggalSelesai, err := time.Parse("2006-01-02", request.TanggalSelesai)
-	exception.PanicIfError(err)
+	if err != nil {
+		u.Log.Info().Str("tanggal_selesai", request.TanggalSelesai).Msg("Invalid date format")
+		panic(exception.BadRequestError{
+			Message: "Invalid date format",
+		})
+	}
 
 	cuti.TanggalMulai = tanggalMulai
 	cuti.TanggalSelesai = tanggalSelesai
 	cuti.Keterangan = request.Keterangan
 
 	if err := u.CutiRepository.Update(&cuti); err != nil {
-		exception.PanicIfError(err)
+		u.Log.Error().Err(err).Msg("Failed to update cuti")
+		panic(exception.InternalServerError{
+			Message: "Failed to update cuti",
+		})
 	}
 
 	return model.CutiResponse{
@@ -157,27 +203,39 @@ func (u *CutiUseCase) Update(id string, request *model.CutiUpdateRequest) model.
 }
 
 func (u *CutiUseCase) UpdateStatus(id string, request *model.CutiUpdateRequest) model.CutiResponse {
-	if valid := validation.ValidateCutiUpdateRequest(request); valid != nil {
+	validation.ValidateCutiUpdateRequest(u.Validator, u.Log, request)
+
+	cutiID, err := uuid.Parse(id)
+	if err != nil {
+		u.Log.Info().Str("id", id).Msg("Invalid UUID")
 		panic(exception.BadRequestError{
-			Message: "Invalid request data",
+			Message: "Invalid UUID",
 		})
 	}
 
-	cutiID, err := uuid.Parse(id)
-	exception.PanicIfError(err)
-
 	cuti, err := u.CutiRepository.FindByID(cutiID)
 	if err != nil {
+		u.Log.Info().Str("id", id).Msg("Cuti not found")
 		panic(exception.NotFoundError{
 			Message: "Cuti not found",
 		})
 	}
 
 	tanggalMulai, err := time.Parse("2006-01-02", request.TanggalMulai)
-	exception.PanicIfError(err)
+	if err != nil {
+		u.Log.Info().Str("tanggal_mulai", request.TanggalMulai).Msg("Invalid date format")
+		panic(exception.BadRequestError{
+			Message: "Invalid date format",
+		})
+	}
 
 	tanggalSelesai, err := time.Parse("2006-01-02", request.TanggalSelesai)
-	exception.PanicIfError(err)
+	if err != nil {
+		u.Log.Info().Str("tanggal_selesai", request.TanggalSelesai).Msg("Invalid date format")
+		panic(exception.BadRequestError{
+			Message: "Invalid date format",
+		})
+	}
 
 	cuti.TanggalMulai = tanggalMulai
 	cuti.TanggalSelesai = tanggalSelesai
@@ -185,7 +243,10 @@ func (u *CutiUseCase) UpdateStatus(id string, request *model.CutiUpdateRequest) 
 	cuti.Status = request.Status
 
 	if err := u.CutiRepository.Update(&cuti); err != nil {
-		exception.PanicIfError(err)
+		u.Log.Error().Err(err).Msg("Failed to update cuti")
+		panic(exception.InternalServerError{
+			Message: "Failed to update cuti",
+		})
 	}
 
 	return model.CutiResponse{
@@ -200,16 +261,25 @@ func (u *CutiUseCase) UpdateStatus(id string, request *model.CutiUpdateRequest) 
 
 func (u *CutiUseCase) Delete(id string) {
 	cutiID, err := uuid.Parse(id)
-	exception.PanicIfError(err)
+	if err != nil {
+		u.Log.Info().Str("id", id).Msg("Invalid UUID")
+		panic(exception.BadRequestError{
+			Message: "Invalid UUID",
+		})
+	}
 
 	cuti, err := u.CutiRepository.FindByID(cutiID)
 	if err != nil {
+		u.Log.Info().Str("id", id).Msg("Cuti not found")
 		panic(exception.NotFoundError{
 			Message: "Cuti not found",
 		})
 	}
 
 	if err := u.CutiRepository.Delete(&cuti); err != nil {
-		exception.PanicIfError(err)
+		u.Log.Err(err).Msg("Failed to delete cuti")
+		panic(exception.InternalServerError{
+			Message: "Failed to delete cuti",
+		})
 	}
 }

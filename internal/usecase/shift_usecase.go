@@ -7,32 +7,44 @@ import (
 	"github.com/fathoor/simkes-api/internal/model"
 	"github.com/fathoor/simkes-api/internal/repository"
 	"github.com/fathoor/simkes-api/internal/validation"
+	"github.com/go-playground/validator/v10"
+	"github.com/rs/zerolog"
 	"github.com/samber/do"
 	"time"
 )
 
 type ShiftUseCase struct {
-	repository.ShiftRepository
+	ShiftRepository *repository.ShiftRepository
+	Log             *zerolog.Logger
+	Validator       *validator.Validate
 }
 
 func NewShiftUseCase(i *do.Injector) (*ShiftUseCase, error) {
 	return &ShiftUseCase{
-		ShiftRepository: do.MustInvoke[repository.ShiftRepository](i),
+		ShiftRepository: do.MustInvoke[*repository.ShiftRepository](i),
+		Log:             do.MustInvoke[*zerolog.Logger](i),
+		Validator:       do.MustInvoke[*validator.Validate](i),
 	}, nil
 }
 
 func (u *ShiftUseCase) Create(request *model.ShiftRequest) model.ShiftResponse {
-	if valid := validation.ValidateShiftRequest(request); valid != nil {
+	validation.ValidateShiftRequest(u.Validator, u.Log, request)
+
+	jamMasuk, err := time.ParseInLocation("2006-01-02 15:04:05", fmt.Sprintf("1970-01-01 %s", request.JamMasuk), time.FixedZone("WIB", 7*60*60))
+	if err != nil {
+		u.Log.Info().Str("jam_masuk", request.JamMasuk).Msg("Invalid jam masuk")
 		panic(exception.BadRequestError{
 			Message: "Invalid request data",
 		})
 	}
 
-	jamMasuk, err := time.ParseInLocation("2006-01-02 15:04:05", fmt.Sprintf("1970-01-01 %s", request.JamMasuk), time.FixedZone("WIB", 7*60*60))
-	exception.PanicIfError(err)
-
 	jamKeluar, err := time.ParseInLocation("2006-01-02 15:04:05", fmt.Sprintf("1970-01-01 %s", request.JamKeluar), time.FixedZone("WIB", 7*60*60))
-	exception.PanicIfError(err)
+	if err != nil {
+		u.Log.Info().Str("jam_keluar", request.JamKeluar).Msg("Invalid jam keluar")
+		panic(exception.BadRequestError{
+			Message: "Invalid request data",
+		})
+	}
 
 	shift := entity.Shift{
 		Nama:      request.Nama,
@@ -41,7 +53,10 @@ func (u *ShiftUseCase) Create(request *model.ShiftRequest) model.ShiftResponse {
 	}
 
 	if err := u.ShiftRepository.Insert(&shift); err != nil {
-		exception.PanicIfError(err)
+		u.Log.Error().Err(err).Msg("Failed to insert shift")
+		panic(exception.InternalServerError{
+			Message: "Failed to insert shift",
+		})
 	}
 
 	response := model.ShiftResponse{
@@ -55,7 +70,12 @@ func (u *ShiftUseCase) Create(request *model.ShiftRequest) model.ShiftResponse {
 
 func (u *ShiftUseCase) GetAll() []model.ShiftResponse {
 	shift, err := u.ShiftRepository.FindAll()
-	exception.PanicIfError(err)
+	if err != nil {
+		u.Log.Error().Err(err).Msg("Failed to get shift")
+		panic(exception.InternalServerError{
+			Message: "Failed to get shift",
+		})
+	}
 
 	response := make([]model.ShiftResponse, len(shift))
 	for i, shift := range shift {
@@ -72,6 +92,7 @@ func (u *ShiftUseCase) GetAll() []model.ShiftResponse {
 func (u *ShiftUseCase) GetByNama(nama string) model.ShiftResponse {
 	shift, err := u.ShiftRepository.FindByNama(nama)
 	if err != nil {
+		u.Log.Info().Str("nama", nama).Msg("Shift not found")
 		panic(exception.NotFoundError{
 			Message: "Shift not found",
 		})
@@ -87,31 +108,41 @@ func (u *ShiftUseCase) GetByNama(nama string) model.ShiftResponse {
 }
 
 func (u *ShiftUseCase) Update(nama string, request *model.ShiftRequest) model.ShiftResponse {
-	if valid := validation.ValidateShiftRequest(request); valid != nil {
-		panic(exception.BadRequestError{
-			Message: "Invalid request data",
-		})
-	}
+	validation.ValidateShiftRequest(u.Validator, u.Log, request)
 
 	shift, err := u.ShiftRepository.FindByNama(nama)
 	if err != nil {
+		u.Log.Info().Str("nama", nama).Msg("Shift not found")
 		panic(exception.NotFoundError{
 			Message: "Shift not found",
 		})
 	}
 
 	jamMasuk, err := time.ParseInLocation("2006-01-02 15:04:05", fmt.Sprintf("1970-01-01 %s", request.JamMasuk), time.FixedZone("WIB", 7*60*60))
-	exception.PanicIfError(err)
+	if err != nil {
+		u.Log.Info().Str("jam_masuk", request.JamMasuk).Msg("Invalid jam masuk")
+		panic(exception.BadRequestError{
+			Message: "Invalid request data",
+		})
+	}
 
 	jamKeluar, err := time.ParseInLocation("2006-01-02 15:04:05", fmt.Sprintf("1970-01-01 %s", request.JamKeluar), time.FixedZone("WIB", 7*60*60))
-	exception.PanicIfError(err)
+	if err != nil {
+		u.Log.Info().Str("jam_keluar", request.JamKeluar).Msg("Invalid jam keluar")
+		panic(exception.BadRequestError{
+			Message: "Invalid request data",
+		})
+	}
 
 	shift.Nama = request.Nama
 	shift.JamMasuk = jamMasuk
 	shift.JamKeluar = jamKeluar
 
 	if err := u.ShiftRepository.Update(&shift); err != nil {
-		exception.PanicIfError(err)
+		u.Log.Error().Err(err).Msg("Failed to update shift")
+		panic(exception.InternalServerError{
+			Message: "Failed to update shift",
+		})
 	}
 
 	response := model.ShiftResponse{
@@ -126,12 +157,16 @@ func (u *ShiftUseCase) Update(nama string, request *model.ShiftRequest) model.Sh
 func (u *ShiftUseCase) Delete(nama string) {
 	shift, err := u.ShiftRepository.FindByNama(nama)
 	if err != nil {
+		u.Log.Info().Str("nama", nama).Msg("Shift not found")
 		panic(exception.NotFoundError{
 			Message: "Shift not found",
 		})
 	}
 
 	if err := u.ShiftRepository.Delete(&shift); err != nil {
-		exception.PanicIfError(err)
+		u.Log.Error().Err(err).Msg("Failed to delete shift")
+		panic(exception.InternalServerError{
+			Message: "Failed to delete shift",
+		})
 	}
 }

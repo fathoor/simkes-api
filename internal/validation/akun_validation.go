@@ -1,14 +1,26 @@
 package validation
 
 import (
-	"github.com/fathoor/simkes-api/internal/config"
+	"github.com/fathoor/simkes-api/internal/exception"
 	"github.com/fathoor/simkes-api/internal/model"
+	"github.com/go-playground/validator/v10"
+	"github.com/rs/zerolog"
 )
 
-func ValidateAkunRequest(request *model.AkunRequest) error {
-	return config.Validator.Struct(request)
+func ValidateAkunRequest(validator *validator.Validate, log *zerolog.Logger, request *model.AkunRequest) {
+	if err := validator.Struct(request); err != nil {
+		log.Info().Err(err).Msg("Validation error")
+		panic(&exception.BadRequestError{
+			Message: "Invalid request",
+		})
+	}
 }
 
-func ValidateAkunUpdateRequest(request *model.AkunUpdateRequest) error {
-	return config.Validator.Struct(request)
+func ValidateAkunUpdateRequest(validator *validator.Validate, log *zerolog.Logger, request *model.AkunUpdateRequest) {
+	if err := validator.Struct(request); err != nil {
+		log.Info().Err(err).Msg("Validation error")
+		panic(&exception.BadRequestError{
+			Message: "Invalid request",
+		})
+	}
 }
