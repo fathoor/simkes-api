@@ -38,7 +38,7 @@ func PanicIfError(err error, ctx ...string) {
 				Message: "Data not found",
 			})
 		} else {
-			log.Printf("Error: [%v] %v", ctx, err)
+			log.Printf("Error: `%v` %v", ctx, err)
 			panic(&InternalServerError{
 				Message: "Internal Server Error",
 			})
