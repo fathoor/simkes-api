@@ -7,11 +7,8 @@
 
 # Storage files
 assets/doc/*
-assets/image/*
+assets/img/*
 test/assets/
 
 # Seeder
-database/seed/*
-
-# Keep folder
-!.keep
+db/

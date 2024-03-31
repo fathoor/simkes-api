@@ -3,21 +3,23 @@ package main
 import (
 	"fmt"
 	"github.com/fathoor/simkes-api/internal/app/config"
-	"github.com/fathoor/simkes-api/internal/app/exception"
 	"github.com/fathoor/simkes-api/internal/app/provider"
 	_ "github.com/joho/godotenv/autoload"
+	"log"
 )
 
 func main() {
 	var (
-		cfg = config.ProvideConfig()
-		app = config.ProvideApp(cfg)
-		db  = config.ProvideDB(cfg)
-		di  = provider.Provider{App: app, DB: db}
+		cfg       = config.NewConfig()
+		fiber     = config.NewFiber()
+		postgres  = config.NewPostgres(cfg)
+		validator = config.NewValidator()
+		bootstrap = provider.Provider{App: fiber, Config: cfg, DB: postgres, Validator: validator}
 	)
 
-	di.Provide()
+	bootstrap.Provide()
 
-	err := app.Listen(fmt.Sprintf(":%d", cfg.GetInt("APP_PORT")))
-	exception.PanicIfError(err)
+	if err := fiber.Listen(fmt.Sprintf(":%d", cfg.GetInt("APP_PORT", 8080))); err != nil {
+		log.Fatalf("Failed to start server: %v", err)
+	}
 }
