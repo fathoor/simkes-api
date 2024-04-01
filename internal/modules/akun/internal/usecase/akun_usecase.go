@@ -136,15 +136,15 @@ func (u *AkunUseCase) Update(request *model.UpdateAkunRequest, updater, id strin
 	akun.Foto = request.Foto
 	akun.Updater = helper.MustParse(updater)
 
+	if err := u.Repository.Update(&akun); err != nil {
+		exception.PanicIfError(err, "Failed to update akun")
+	}
+
 	response := model.AkunResponse{
 		Id:    akun.Id.String(),
 		Email: akun.Email,
 		Foto:  akun.Foto,
 		Role:  akun.Role,
-	}
-
-	if err := u.Repository.Update(&akun); err != nil {
-		exception.PanicIfError(err, "Failed to update akun")
 	}
 
 	return response
