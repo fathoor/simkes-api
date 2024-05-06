@@ -11,5 +11,5 @@ type Jadwal struct {
 	IdShift   string    `db:"id_shift"`
 	JamMasuk  string    `db:"jam_masuk"`
 	JamPulang string    `db:"jam_pulang"`
-	Updater   uuid.UUID `db:"updater`
+	Updater   uuid.UUID `db:"updater"`
 }
